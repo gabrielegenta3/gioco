@@ -68,7 +68,6 @@ bool isTotallyConnected(const TArray<bool>& Obstacles, int32 Size)
 
 
 TArray<bool> AGameField::GenerateObstacles(float ObstaclePercentage) {
-	TArray<bool> Obstacles; // map of obstacles (true if there is an obstacle)
 	bool allConnected = true; // flag to check if the map is connected
 	
 	if (ObstaclePercentage < 0 || ObstaclePercentage > 1)
@@ -92,7 +91,7 @@ TArray<bool> AGameField::GenerateObstacles(float ObstaclePercentage) {
 		}
 
 		Obstacles[RandomNumber] = true;
-			
+
 		while (!isTotallyConnected(Obstacles, Size)) 
 		{
 			Obstacles[RandomNumber] = false;
@@ -183,7 +182,7 @@ void AGameField::GenerateField()
 		return;
 	}
 
-	TArray<bool> Obstacles = GenerateObstacles(ObstacleDensity);
+	GenerateObstacles(ObstacleDensity);
 
 	for (int32 i = 0; i < Size; i++)
 	{

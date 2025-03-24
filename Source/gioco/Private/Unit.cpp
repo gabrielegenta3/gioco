@@ -84,10 +84,11 @@ void AUnit::BeginPlay()
 	
 }
 
-void AUnit::Init(EPawnType InPawnType, int32 InPlayerNumber)
+void AUnit::Init(EPawnType InPawnType, int32 InPlayerNumber, FVector2D Pos)
 {
 	PawnType = InPawnType;
 	PlayerNumber = InPlayerNumber;
+	Position = Pos;
 	if (PlayerNumber == 1)
 	{
 		if (PawnType == EPawnType::BRAWLER)

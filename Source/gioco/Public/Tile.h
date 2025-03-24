@@ -40,6 +40,9 @@ public:
 	// get the (x, y) position
 	FVector2D GetGridPosition();
 
+	// function to light up the tile
+	void LightUp();
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -64,6 +67,14 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	bool bIsObstacle;
 
+	// bool to check if the tile is lighted 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool bIsGreen;
+
+	// bool to check if the tile is lighted 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool bIsRed;
+
 	// Material instance for the tile
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Materials")
 	UMaterialInstance* EmptyTile;
@@ -79,6 +90,14 @@ protected:
 	// Material instance for the tile
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Materials")
 	UMaterialInstance* MountainTile;
+
+	// Material instance for the tile
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Materials")
+	UMaterialInstance* GreenTile;
+
+	// Material instance for the tile
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Materials")
+	UMaterialInstance* RedTile;
 
 /*public:	
 	// Called every frame

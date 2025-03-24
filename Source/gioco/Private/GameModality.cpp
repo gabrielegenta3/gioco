@@ -101,14 +101,15 @@ void AGameModality::ChoosePlayerAndStartGame()
 
 void AGameModality::SpawnCellUnit(int32 PlayerNumber, const FVector& SpawnPosition, const EPawnType Type)
 {
+	AGameField* FoundField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+	FVector2D XYPosition =  FoundField->GetXYPositionByRelativeLocation(SpawnPosition);
 	AUnit* Unit = GetWorld()->SpawnActor<AUnit>(UnitClass, SpawnPosition, FRotator::ZeroRotator);
 	if (!Unit)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Impossibile spawnare ATile a %s"), *SpawnPosition.ToString());
 		return;
 	}
-	Unit->Init(Type, PlayerNumber); // the tile is an obstacle if Obstacles[i * Size + j] is true
-	AGameField* FoundField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+	Unit->Init(Type, PlayerNumber, XYPosition); // the tile is an obstacle if Obstacles[i * Size + j] is true
 	const float TileScale = FoundField->TileSize / 100.f;
 	const float Zscaling = 0.2f;
 	Unit->SetActorScale3D(FVector(TileScale, TileScale, Zscaling));

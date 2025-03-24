@@ -65,6 +65,26 @@ ATile::ATile()
 		UE_LOG(LogTemp, Error, TEXT("Empty Tile non trovata!"));
 	}
 
+	MatInstance = new ConstructorHelpers::FObjectFinder<UMaterialInstance>(TEXT("/Script/Engine.MaterialInstanceConstant'/Game/Materials/MI_Green.MI_Green'"));
+	if (MatInstance && MatInstance->Succeeded())
+	{
+		GreenTile = MatInstance->Object;
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Green Tile non trovata!"));
+	}
+
+	MatInstance = new ConstructorHelpers::FObjectFinder<UMaterialInstance>(TEXT("/Script/Engine.MaterialInstanceConstant'/Game/Materials/MI_Red.MI_Red'"));
+	if (MatInstance && MatInstance->Succeeded())
+	{
+		RedTile = MatInstance->Object;
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Red Tile non trovata!"));
+	}
+
 	delete MatInstance;
 
 	//SetRootComponent(StaticMeshComponent);
@@ -78,6 +98,7 @@ ATile::ATile()
 	{
 		UE_LOG(LogTemp, Error, TEXT("Static Mesh non trovata nel costruttore!"));
 	}
+
 }
 
 
@@ -132,6 +153,23 @@ void ATile::SetGridPosition(const double InX, const double InY)
 FVector2D ATile::GetGridPosition()
 {
 	return TileGridPosition;
+}
+
+void ATile::LightUp()
+{
+	if (!bIsObstacle && Status == ETileStatus::OCCUPIED) 
+	{
+		StaticMeshComponent->SetMaterial(0, RedTile);
+	}
+	else if (!bIsObstacle)
+	{
+		StaticMeshComponent->SetMaterial(0, GreenTile);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("You can't light up a occupied tile!"));
+	}
+	
 }
 
 // Called when the game starts or when spawned

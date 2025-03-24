@@ -20,7 +20,7 @@ public:
 	TArray<ATile*> TileArray;
 
 	//given a position returns a tile
-	UPROPERTY(Transient)
+	//UPROPERTY(Transient)
 	TMap<FVector2D, ATile*> TileMap;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
@@ -54,6 +54,9 @@ public:
 	float TileSize;
 
     static constexpr float ObstacleDensity = 0.2f;
+
+	// map of obstacles
+	TArray<bool> Obstacles;
 
 	// Sets default values for this actor's properties
 	AGameField();

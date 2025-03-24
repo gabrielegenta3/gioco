@@ -27,6 +27,15 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	int32 PlayerNumber;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	int32 MovementRange;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	int32 AttackRange;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	FVector2D Position;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	USceneComponent* Scene;
 
@@ -50,7 +59,7 @@ public:
 	UMaterialInstance* EnemySniper;
 
 	// called to initialize the unit
-	void Init(EPawnType InPawnType, int32 InPlayerNumber);
+	void Init(EPawnType InPawnType, int32 InPlayerNumber, FVector2D Pos);
 
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

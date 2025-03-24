@@ -3,6 +3,39 @@
 
 #include "HumanPlayer.h"
 
+// function to check in which tile a Unit could go based on their max step
+// function to visit all the cells of the map
+void DFS(int32 i, int32 j, int32 Size, int32 ActualStep, int32 MaxSteps, const TArray<bool>& Obstacles, TArray<bool>& Visited, AGameField* GF) // depth-first search to check if the map is connected
+{
+	Visited[i * Size + j] = true;
+	GF->TileArray[i * Size + j]->LightUp();
+
+
+	// array with the 4 possible directions
+	const int32 DirX[4] = { 1, -1, 0, 0 };
+	const int32 DirY[4] = { 0, 0, 1, -1 };
+
+	for (int d = 0; d < 4; d++)
+	{
+		int nx = i + DirX[d];
+		int ny = j + DirY[d];
+
+		// limit check
+		if (nx >= 0 && nx < Size && ny >= 0 && ny < Size)
+		{
+			int32 Index = nx * Size + ny;
+			// if the cell is free and not visited, visit it
+			ActualStep++;
+			if (!Obstacles[Index] && !Visited[Index] && ActualStep < MaxSteps)
+			{
+				DFS(nx, ny, Size, ActualStep, MaxSteps, Obstacles, Visited, GF);
+			}
+		}
+	}
+}
+
+
+
 // Sets default values
 AHumanPlayer::AHumanPlayer()
 {
@@ -100,7 +133,8 @@ void AHumanPlayer::OnClick()
 				GameModality->SpawnCellUnit(1, SpawnPosition, EPawnType::SNIPER);
 				FString LocationString = FString::Printf(TEXT("You spawned a sniper at the position (%.0f, %.0f)"), SpawnPosition.X, SpawnPosition.Y);
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, LocationString);
-				IsMyTurn = false;
+				GameInstance->bSniperButtonClicked = false;
+				//IsMyTurn = false;
 			}
 		}
 	}
@@ -118,17 +152,31 @@ void AHumanPlayer::OnClick()
 				GameModality->SpawnCellUnit(1, SpawnPosition, EPawnType::BRAWLER);
 				FString LocationString = FString::Printf(TEXT("You spawned a brawler at the position (%.0f, %.0f)"), SpawnPosition.X, SpawnPosition.Y);
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, LocationString);
-				IsMyTurn = false;
+				GameInstance->bBrawlerButtonClicked = false;
+				//IsMyTurn = false;
 			}
 		}
 	}
 	else if (Hit.bBlockingHit && IsMyTurn)
 	{
-		if (AUnit* CurrUnit = Cast<AUnit>(Hit.GetActor())) {
+		if (AUnit* CurrUnit = Cast<AUnit>(Hit.GetActor())) 
+		{
 			if (CurrUnit->PlayerNumber == 1) 
 			{
-
+				AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+				if (!GameField) 
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Couldn't cast the GameField"));
+				}
+				FVector2D XYPosition = CurrUnit->Position;
+				TArray<bool> Visited;
+				Visited.Init(false, GameField->Size * GameField->Size);
+				DFS(XYPosition.X, XYPosition.Y, GameField->Size, 0, CurrUnit->MovementRange,GameField->Obstacles, Visited, GameField);
 			}
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Couldn't cast the Unit you clicked on"));
 		}
 	}
 }
