@@ -37,7 +37,7 @@ void Agame_PlayerController::BeginPlay()
 
 	if (HUDClass)
 	{
-		HUD = CreateWidget<UUserWidget>(this, HUDClass);
+		HUD = CreateWidget<UHUDWidget>(this, HUDClass);
 		if (HUD)
 		{
 			//HUD->AddToViewport();

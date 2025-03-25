@@ -294,7 +294,7 @@ TArray<FVector> AUnit::ConvertPathToWorldPositions(const TArray<FVector>& PathIn
 	{
 		int32 Index = (int32)FakeIndexVec.X; // estraiamo l'indice
 		FVector WorldLoc = GF->TileArray[Index]->GetActorLocation();
-		WorldLoc.Y = 1;
+		WorldLoc.Z = 1;
 		WorldPositions.Add(WorldLoc);
 	}
 	return WorldPositions;

@@ -10,7 +10,7 @@ bool UHUDWidget::Initialize()
 
     if (!WidgetTree)
     {
-        UE_LOG(LogTemp, Error, TEXT("WidgetTree è nullo!"))
+        UE_LOG(LogTemp, Error, TEXT("WidgetTree is null!"))
             return false;
     }
 
@@ -27,7 +27,7 @@ bool UHUDWidget::Initialize()
     if (SniperButton)
     {
         // Creiamo un testo per il bottone
-        UTextBlock* SniperButtonText = NewObject<UTextBlock>(this, UTextBlock::StaticClass());
+        UTextBlock* SniperButtonText = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("SniperText"));;
         if (SniperButtonText)
         {
             SniperButtonText->SetText(FText::FromString("Sniper"));
@@ -50,7 +50,7 @@ bool UHUDWidget::Initialize()
     }
 
     // Creiamo il bottone Brawler
-    BrawlerButton = NewObject<UButton>(this, UButton::StaticClass());
+    BrawlerButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("BrawlerButton"));
     if (BrawlerButton)
     {
         // Creiamo un testo per il bottone
@@ -76,7 +76,7 @@ bool UHUDWidget::Initialize()
         }
     }
 
-    ResetButton = NewObject<UButton>(this, UButton::StaticClass());
+    ResetButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("ResetButton"));
     if (ResetButton)
     {
         // Creiamo un testo per il bottone

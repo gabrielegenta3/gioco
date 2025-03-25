@@ -12,6 +12,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Components/Button.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "HUDWidget.h"
 #include "game_PlayerController.generated.h"
 
 /**
@@ -35,7 +36,7 @@ public:
 	TSubclassOf<UUserWidget> HUDClass;
 
 	UPROPERTY()
-	UUserWidget* HUD;
+	UHUDWidget* HUD;
 
 	UPROPERTY(meta = (BindWidget))
 	UButton* SniperButton;

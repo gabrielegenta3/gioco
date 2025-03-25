@@ -2,6 +2,8 @@
 
 
 #include "HumanPlayer.h"
+#include "HUDWidget.h"
+#include "game_PlayerController.h"
 
 // function to check in which tile a Unit could go based on their max step
 // function to visit all the cells of the map
@@ -204,6 +206,9 @@ void AHumanPlayer::OnClick()
 				AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
 				GameModality->SpawnCellUnit(1, SpawnPosition, EPawnType::SNIPER);
 
+				Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetActorOfClass(GetWorld(), Agame_PlayerController::StaticClass()));
+				PlayerC->HUD->HideSniperButton();
+
 				AGameField* FoundField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
 				FVector2D XYPosition = FoundField->GetXYPositionByRelativeLocation(SpawnPosition);
 				FString LocationString = FString::Printf(TEXT("You spawned a sniper at the position (%i, %i)"), static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y));
@@ -227,6 +232,9 @@ void AHumanPlayer::OnClick()
 
 				AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
 				GameModality->SpawnCellUnit(1, SpawnPosition, EPawnType::BRAWLER);
+
+				Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetActorOfClass(GetWorld(), Agame_PlayerController::StaticClass()));
+				PlayerC->HUD->HideBrawlerButton();
 
 				AGameField* FoundField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
 				FVector2D XYPosition = FoundField->GetXYPositionByRelativeLocation(SpawnPosition);
