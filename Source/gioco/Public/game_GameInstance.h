@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
+#include "Unit.h"
 #include "game_GameInstance.generated.h"
 
 /**
@@ -34,6 +35,14 @@ public:
 	// flag to check if BrawlerButton is clicked
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
 	bool bBrawlerButtonClicked = false;
+
+	// flag to check if BrawlerButton is clicked
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
+	bool bIsUnitClicked = false;
+
+	// flag to check if BrawlerButton is clicked
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
+	AUnit* SelectedUnit;
 
 	// increment the score for human player
 	void IncrementScoreHumanPlayer();

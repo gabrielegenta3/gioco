@@ -104,7 +104,8 @@ public:
 	// function to generate obstacles
 	TArray<bool> GenerateObstacles(float ObstaclePercentage);
 
-
+	// method to unhighlight the cells 
+	void UnHighLight();
 
 public:	
 	// Called every frame

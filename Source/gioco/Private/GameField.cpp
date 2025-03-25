@@ -109,6 +109,20 @@ TArray<bool> AGameField::GenerateObstacles(float ObstaclePercentage) {
 	return Obstacles;
 }
 
+void AGameField::UnHighLight()
+{
+	for (int i = 0; i < Size; i++) 
+	{
+		for (int j = 0; j < Size; j++)
+		{
+			if (!TileArray[i * Size + j]->bIsObstacle)
+			{
+				TileArray[i * Size + j]->ResetTile(false);
+			}
+		}
+	}
+}
+
 // Sets default values
 AGameField::AGameField()
 {
@@ -225,7 +239,7 @@ FVector2D AGameField::GetXYPositionByRelativeLocation(const FVector& Location) c
 {
 	const double XPos = Location.X / (TileSize * NextCellPositionMultiplier);
 	const double YPos = Location.Y / (TileSize * NextCellPositionMultiplier);
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, FString::Printf(TEXT("x=%f,y=%f"), XPos, YPos));
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, FString::Printf(TEXT("x=%f,y=%f"), XPos, YPos));
 	return FVector2D(XPos, YPos);
 }
 

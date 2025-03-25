@@ -19,6 +19,18 @@ class GIOCO_API ATile : public AActor
 	GENERATED_BODY()
 	
 public:	
+	// bool to set the tile as an obstacle
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool bIsObstacle;
+
+	// bool to check if the tile is lighted 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool bIsGreen;
+
+	// bool to check if the tile is lighted 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool bIsRed;
+
 	// Sets default values for this actor's properties
 	ATile();
 
@@ -43,7 +55,10 @@ public:
 	// function to light up the tile
 	void LightUp();
 
-protected:
+	// function to light up the tile
+	void ResetTile(bool isTotalReset);
+
+//protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
@@ -62,18 +77,6 @@ protected:
 	// (x, y) position of the tile
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	FVector2D TileGridPosition;
-
-	// bool to set the tile as an obstacle
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	bool bIsObstacle;
-
-	// bool to check if the tile is lighted 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	bool bIsGreen;
-
-	// bool to check if the tile is lighted 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	bool bIsRed;
 
 	// Material instance for the tile
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Materials")

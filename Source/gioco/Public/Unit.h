@@ -5,7 +5,9 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
 #include "PlayerInterface.h"
+#include "GameField.h"
 #include "Unit.generated.h"
+
 
 UCLASS()
 class GIOCO_API AUnit : public APawn
@@ -16,9 +18,24 @@ public:
 	// Sets default values for this pawn's properties
 	AUnit();
 
+	// calling to move a unit to a destination
+	void FindPathAndMove(const FVector& Destination, AGameField* GameField);
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	// finds CurrentPath
+	bool FindPathBFS(int32 StartIndex, int32 GoalIndex, AGameField* GF);
+
+	// convert tile indeces to 3D positions
+	TArray<FVector> ConvertPathToWorldPositions(const TArray<FVector>& PathIndices, AGameField* GF);
+
+	// starts moving step to step
+	void MoveAlongPath(const TArray<FVector>& WorldPositions);
+
+	//function called by timer to move
+	UFUNCTION()
+	void MoveStep();
 
 public:	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
@@ -32,6 +49,15 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	int32 AttackRange;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	int32 MaxDamage;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	int32 MinDamage;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	int32 HP;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	FVector2D Position;
@@ -71,4 +97,17 @@ public:
 	UFUNCTION()
 	void SelfDestroy();
 
+private:
+	// Path in 3D positions
+	UPROPERTY()
+	TArray<FVector> CurrentPath;
+
+	// Current index in the path
+	int32 CurrentPathIndex;
+
+	// Timer to manage step-by-step movement
+	FTimerHandle MoveTimerHandle;
+
+	// movement speed (whether you want to move in bursts or at a fixed tempo)
+	float StepTime;
 };

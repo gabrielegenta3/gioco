@@ -40,10 +40,21 @@ public:
 	UFUNCTION()
 	void OnResetButtonClicked();
 
+	void MoveUnitAlongPath(AUnit* Unit, const TArray<FVector>& PathPositions, float StepTime);
+
+	void MoveStep();
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	TArray<FVector> CurrentPath;
+
+	int32 CurrentPathIndex;
+
+	FTimerHandle MoveTimerHandle;
+
+	AUnit* ControlledUnit;
 
 	bool IsMyTurn = false;
 public:	

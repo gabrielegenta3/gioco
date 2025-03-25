@@ -160,17 +160,33 @@ void ATile::LightUp()
 	if (!bIsObstacle && Status == ETileStatus::OCCUPIED) 
 	{
 		StaticMeshComponent->SetMaterial(0, RedTile);
+		bIsRed = true;
+		UE_LOG(LogTemp, Warning, TEXT("red tile color"));
 	}
 	else if (!bIsObstacle)
 	{
 		StaticMeshComponent->SetMaterial(0, GreenTile);
+		bIsGreen = true;
+		UE_LOG(LogTemp, Warning, TEXT("green tile color"));
 	}
 	else
 	{
 		UE_LOG(LogTemp, Error, TEXT("You can't light up a occupied tile!"));
 	}
-	
 }
+
+void ATile::ResetTile(bool isTotalReset)
+{
+	StaticMeshComponent->SetMaterial(0, EmptyTile);
+	bIsRed = false;
+	bIsGreen = false;
+	if (isTotalReset)
+	{
+		bIsObstacle = false;
+		Status = ETileStatus::EMPTY;
+	}
+}
+
 
 // Called when the game starts or when spawned
 void ATile::BeginPlay()

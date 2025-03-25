@@ -5,30 +5,101 @@
 
 // function to check in which tile a Unit could go based on their max step
 // function to visit all the cells of the map
-void DFS(int32 i, int32 j, int32 Size, int32 ActualStep, int32 MaxSteps, const TArray<bool>& Obstacles, TArray<bool>& Visited, AGameField* GF) // depth-first search to check if the map is connected
+void BFSMovementRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TArray<bool>& visited, AGameField* GF)
 {
-	Visited[i * Size + j] = true;
-	GF->TileArray[i * Size + j]->LightUp();
+	TQueue<FIntPoint> queue;
+	TQueue<int32> distanceQueue; // per salvare i passi correnti
 
+	queue.Enqueue(FIntPoint(startX, startY));
+	distanceQueue.Enqueue(0);
 
-	// array with the 4 possible directions
-	const int32 DirX[4] = { 1, -1, 0, 0 };
-	const int32 DirY[4] = { 0, 0, 1, -1 };
+	int32 startIndex = startX * size + startY;
+	visited[startIndex] = true;
+	GF->TileArray[startIndex]->StaticMeshComponent->SetMaterial(0, GF->TileArray[startIndex]->GreenTile);
+	//GF->TileArray[startIndex]->LightUp();
 
-	for (int d = 0; d < 4; d++)
+	while (!queue.IsEmpty())
 	{
-		int nx = i + DirX[d];
-		int ny = j + DirY[d];
+		FIntPoint current;
+		queue.Dequeue(current);
 
-		// limit check
-		if (nx >= 0 && nx < Size && ny >= 0 && ny < Size)
+		int32 dist;
+		distanceQueue.Dequeue(dist);
+
+		// Se dist >= maxSteps, non esploriamo più
+		if (dist >= maxSteps)
+			continue;
+
+		// 4 direzioni
+		static const int32 DirX[4] = { 1, -1, 0, 0 };
+		static const int32 DirY[4] = { 0, 0, 1, -1 };
+
+		for (int d = 0; d < 4; d++)
 		{
-			int32 Index = nx * Size + ny;
-			// if the cell is free and not visited, visit it
-			ActualStep++;
-			if (!Obstacles[Index] && !Visited[Index] && ActualStep < MaxSteps)
+			int nx = current.X + DirX[d];
+			int ny = current.Y + DirY[d];
+			if (nx >= 0 && nx < size && ny >= 0 && ny < size)
 			{
-				DFS(nx, ny, Size, ActualStep, MaxSteps, Obstacles, Visited, GF);
+				int32 newIndex = nx * size + ny;
+				if (!visited[newIndex] && GF->TileArray[newIndex]->GetTileStatus() == ETileStatus::EMPTY)
+				{
+					visited[newIndex] = true;
+					//GF->TileArray[newIndex]->StaticMeshComponent->SetMaterial(0, GF->TileArray[newIndex]->GreenTile);
+					GF->TileArray[newIndex]->LightUp();
+
+					queue.Enqueue(FIntPoint(nx, ny));
+					distanceQueue.Enqueue(dist + 1);
+				}
+			}
+		}
+	}
+}
+
+
+// BFS to find attackable units
+void BFSAttackRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TArray<bool>& visited, AGameField* GF)
+{
+	TQueue<FIntPoint> queue;
+	TQueue<int32> distanceQueue; // per salvare i passi correnti
+
+	queue.Enqueue(FIntPoint(startX, startY));
+	distanceQueue.Enqueue(0);
+
+	int32 startIndex = startX * size + startY;
+	visited[startIndex] = true;
+
+	while (!queue.IsEmpty())
+	{
+		FIntPoint current;
+		queue.Dequeue(current);
+
+		int32 dist;
+		distanceQueue.Dequeue(dist);
+
+		// Se dist >= maxSteps, non esploriamo più
+		if (dist >= maxSteps)
+			continue;
+
+		// 4 direzioni
+		static const int32 DirX[4] = { 1, -1, 0, 0 };
+		static const int32 DirY[4] = { 0, 0, 1, -1 };
+
+		for (int d = 0; d < 4; d++)
+		{
+			int nx = current.X + DirX[d];
+			int ny = current.Y + DirY[d];
+			if (nx >= 0 && nx < size && ny >= 0 && ny < size)
+			{
+				int32 newIndex = nx * size + ny;
+				if (!visited[newIndex])
+				{
+					visited[newIndex] = true;
+					if(!GF->TileArray[newIndex]->bIsObstacle && GF->TileArray[newIndex]->GetTileStatus() == ETileStatus::OCCUPIED)
+						GF->TileArray[newIndex]->LightUp();
+
+					queue.Enqueue(FIntPoint(nx, ny));
+					distanceQueue.Enqueue(dist + 1);
+				}
 			}
 		}
 	}
@@ -128,11 +199,16 @@ void AHumanPlayer::OnClick()
 			{
 				CurrTile->SetTileStatus(1, ETileStatus::OCCUPIED);
 				FVector SpawnPosition = CurrTile->GetActorLocation();
-				SpawnPosition.Z += 10;
+				SpawnPosition.Z += 1;
+
 				AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
 				GameModality->SpawnCellUnit(1, SpawnPosition, EPawnType::SNIPER);
-				FString LocationString = FString::Printf(TEXT("You spawned a sniper at the position (%.0f, %.0f)"), SpawnPosition.X, SpawnPosition.Y);
+
+				AGameField* FoundField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+				FVector2D XYPosition = FoundField->GetXYPositionByRelativeLocation(SpawnPosition);
+				FString LocationString = FString::Printf(TEXT("You spawned a sniper at the position (%i, %i)"), static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y));
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, LocationString);
+
 				GameInstance->bSniperButtonClicked = false;
 				//IsMyTurn = false;
 			}
@@ -147,13 +223,43 @@ void AHumanPlayer::OnClick()
 			{
 				CurrTile->SetTileStatus(1, ETileStatus::OCCUPIED);
 				FVector SpawnPosition = CurrTile->GetActorLocation();
-				SpawnPosition.Z += 0.1;
+				SpawnPosition.Z += 1;
+
 				AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
 				GameModality->SpawnCellUnit(1, SpawnPosition, EPawnType::BRAWLER);
-				FString LocationString = FString::Printf(TEXT("You spawned a brawler at the position (%.0f, %.0f)"), SpawnPosition.X, SpawnPosition.Y);
+
+				AGameField* FoundField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+				FVector2D XYPosition = FoundField->GetXYPositionByRelativeLocation(SpawnPosition);
+				FString LocationString = FString::Printf(TEXT("You spawned a brawler at the position (%i, %i)"), static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y));
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, LocationString);
+
 				GameInstance->bBrawlerButtonClicked = false;
 				//IsMyTurn = false;
+			}
+		}
+	}
+	else if (Hit.bBlockingHit && IsMyTurn && GameInstance->bIsUnitClicked)
+	{
+		if (AUnit* CurrUnit = Cast<AUnit>(Hit.GetActor())) {
+			AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+			GameField->UnHighLight();
+			GameInstance->bIsUnitClicked = false;
+			GameInstance->SelectedUnit = nullptr;
+		}
+		else if(ATile* CurrTile = Cast<ATile>(Hit.GetActor()))
+		{
+			if (CurrTile->bIsGreen)
+			{
+				FVector Destination = CurrTile->GetActorLocation();
+				if (GameInstance->SelectedUnit)
+				{
+					AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+					if (GameField)
+					{
+						GameInstance->SelectedUnit->FindPathAndMove(Destination, GameField);
+						GameField->UnHighLight();
+					}
+				}
 			}
 		}
 	}
@@ -161,17 +267,28 @@ void AHumanPlayer::OnClick()
 	{
 		if (AUnit* CurrUnit = Cast<AUnit>(Hit.GetActor())) 
 		{
+			//UE_LOG(LogTemp, Warning, TEXT("Entra nella condizione"));
+			GameInstance->bIsUnitClicked = true;
+			GameInstance->SelectedUnit = CurrUnit;
 			if (CurrUnit->PlayerNumber == 1) 
 			{
+				//UE_LOG(LogTemp, Warning, TEXT("player number = 1"));
 				AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
 				if (!GameField) 
 				{
 					UE_LOG(LogTemp, Warning, TEXT("Couldn't cast the GameField"));
 				}
-				FVector2D XYPosition = CurrUnit->Position;
-				TArray<bool> Visited;
-				Visited.Init(false, GameField->Size * GameField->Size);
-				DFS(XYPosition.X, XYPosition.Y, GameField->Size, 0, CurrUnit->MovementRange,GameField->Obstacles, Visited, GameField);
+				else
+				{
+					FVector2D XYPosition = CurrUnit->Position;
+					//FString LocationString = FString::Printf(TEXT("the unit is in pos (%i, %i)"), static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y));
+					//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, LocationString);
+					TArray<bool> Visited;
+					Visited.Init(false, GameField->Size * GameField->Size);
+					BFSMovementRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, CurrUnit->MovementRange, Visited, GameField);
+					BFSAttackRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, CurrUnit->MovementRange, Visited, GameField);
+				}
+				
 			}
 		}
 		else
