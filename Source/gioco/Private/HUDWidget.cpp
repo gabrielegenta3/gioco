@@ -76,6 +76,32 @@ bool UHUDWidget::Initialize()
         }
     }
 
+    PassButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("PassButton"));
+    if (PassButton)
+    {
+        // Creiamo un testo per il bottone
+        UTextBlock* PassButtonText = NewObject<UTextBlock>(this, UTextBlock::StaticClass());
+        if (PassButtonText)
+        {
+            PassButtonText->SetText(FText::FromString("Pass"));
+            PassButton->AddChild(PassButtonText);
+        }
+
+        UCanvasPanelSlot* PassSlot = RootCanvas->AddChildToCanvas(PassButton);
+        if (PassSlot)
+        {
+            PassSlot->SetPosition(FVector2D(50.f, 290.f));
+            PassSlot->SetSize(FVector2D(150.f, 50.f));
+        }
+
+        // Evento OnClicked
+        // Colleghiamo l'evento OnClicked
+        if (AHumanPlayer* HP = Cast<AHumanPlayer>(GetOwningPlayerPawn()))
+        {
+            PassButton->OnClicked.AddDynamic(HP, &AHumanPlayer::OnPassButtonClicked);
+        }
+    }
+    
     ResetButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("ResetButton"));
     if (ResetButton)
     {
@@ -90,7 +116,7 @@ bool UHUDWidget::Initialize()
         UCanvasPanelSlot* ResetSlot = RootCanvas->AddChildToCanvas(ResetButton);
         if (ResetSlot)
         {
-            ResetSlot->SetPosition(FVector2D(50.f, 290.f));
+            ResetSlot->SetPosition(FVector2D(50.f, 500.f));
             ResetSlot->SetSize(FVector2D(150.f, 50.f));
         }
 

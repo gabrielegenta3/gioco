@@ -40,8 +40,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
 	bool bIsUnitClicked = false;
 
-	// flag to check if BrawlerButton is clicked
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
+	UPROPERTY(BlueprintReadOnly)
 	AUnit* SelectedUnit;
 
 	// increment the score for human player

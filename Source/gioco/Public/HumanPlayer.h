@@ -40,6 +40,9 @@ public:
 	UFUNCTION()
 	void OnResetButtonClicked();
 
+	UFUNCTION()
+	void OnPassButtonClicked();
+
 	void MoveUnitAlongPath(AUnit* Unit, const TArray<FVector>& PathPositions, float StepTime);
 
 	void MoveStep();
@@ -56,7 +59,6 @@ protected:
 
 	AUnit* ControlledUnit;
 
-	bool IsMyTurn = false;
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

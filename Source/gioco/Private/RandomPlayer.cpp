@@ -9,6 +9,8 @@ ARandomPlayer::ARandomPlayer()
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	GameInstance = Cast<Ugame_GameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	BrawlerPlaced = false;
+	SniperPlaced = false;
 }
 
 // Called when the game starts or when spawned
@@ -41,25 +43,57 @@ void ARandomPlayer::OnTurn()
 
 	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [&]()
 		{
-			TArray<ATile*> FreeCells;
-			AGameModality* GameModality = (AGameModality*)(GetWorld()->GetAuthGameMode());
-			for (auto& CurrTile : GameModality->GameField->GetTileArray())
+			if (!(SniperPlaced && BrawlerPlaced))
 			{
-				if (CurrTile->GetTileStatus() == ETileStatus::EMPTY)
+				AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+				int32 RandomNumber, Rand;
+				Rand = -1;
+				do {
+					RandomNumber = FMath::RandRange(0, GameField->Size * GameField->Size - 1);
+				} while (GameField->TileArray[RandomNumber]->GetTileStatus() == ETileStatus::OCCUPIED);
+				
+				UE_LOG(LogTemp, Warning, TEXT("Random index: %i"), RandomNumber);
+
+				if (!(SniperPlaced || BrawlerPlaced))
 				{
-					FreeCells.Add(CurrTile);
+					Rand = FMath::RandRange(0, 1);
 				}
+
+				if (SniperPlaced || Rand == 0)
+				{
+					int32 X = RandomNumber / GameField->Size;
+					int32 Y = RandomNumber % GameField->Size;
+			
+					FVector Position = GameField->GetRelativeLocationByXYPosition(X, Y);
+					Position.Z = 1;
+					AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
+					GameModality->SpawnCellUnit(2, Position, EPawnType::BRAWLER);
+
+					FString LocationString = FString::Printf(TEXT("AI spawned a Brawler at the position (%i, %i)"), X, Y);
+					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, LocationString);
+
+					GameModality->TurnNextPlayer();
+				} 
+				else if (BrawlerPlaced || Rand == 1)
+				{
+					int32 X = RandomNumber / GameField->Size;
+					int32 Y = RandomNumber % GameField->Size;
+
+					FVector Position = GameField->GetRelativeLocationByXYPosition(X, Y);
+					Position.Z = 1;
+					AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
+					GameModality->SpawnCellUnit(2, Position, EPawnType::SNIPER);
+
+					FString LocationString = FString::Printf(TEXT("AI spawned a Sniper at the position (%i, %i)"), X, Y);
+					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, LocationString);
+
+					GameModality->TurnNextPlayer();
+				}
+				
+
 			}
-
-			if (FreeCells.Num() > 0)
-			{
-				int32 RandIdx = FMath::Rand() % FreeCells.Num();
-				FVector Location = GameModality->GameField->GetRelativeLocationByXYPosition((FreeCells[RandIdx])->GetGridPosition()[0], (FreeCells[RandIdx])->GetGridPosition()[1]);
-				FreeCells[RandIdx]->SetTileStatus(PlayerNumber, ETileStatus::OCCUPIED);
-
-
-			}
-		}, 3, false);
+			
+		}, 1.5, false);
 }
 
 void ARandomPlayer::OnWin()

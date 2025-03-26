@@ -39,7 +39,7 @@ void DFS(int i, int j, int32 Size, const TArray<bool>& Obstacles, TArray<bool>& 
 bool isTotallyConnected(const TArray<bool>& Obstacles, int32 Size)
 {
 	// fiund the first cell with no obstacle
-	int32 StartIndex = Obstacles.Find(false);
+	int32 StartIndex = Obstacles.Find(false); 
 	if (StartIndex == INDEX_NONE)
 	{
 		// if all cells are obstacles, the map is connected

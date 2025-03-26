@@ -32,14 +32,8 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Buttons")
 	UButton* ResetButton;
 
-	UPROPERTY()
-	UTextBlock* ResetText;
-
-	UPROPERTY()
-	UTextBlock* SniperText;
-
-	UPROPERTY()
-	UTextBlock* BrawlerText;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Buttons")
+	UButton* PassButton;
 
 	UPROPERTY()
 	UCanvasPanel* RootCanvas;

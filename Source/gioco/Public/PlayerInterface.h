@@ -31,6 +31,7 @@ class GIOCO_API IPlayerInterface
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
 	int32 PlayerNumber;
+	bool IsMyTurn = false;
 	//EPawnType PawnType;
 
 	virtual void OnTurn() {};

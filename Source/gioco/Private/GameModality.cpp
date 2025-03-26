@@ -8,6 +8,7 @@
 #include "RandomPlayer.h"
 #include "HUDWidget.h"
 #include "game_PlayerController.h"
+#include "game_GameInstance.h"
 #include "Camera/CameraActor.h"
 
 AGameModality::AGameModality()
@@ -39,30 +40,6 @@ void AGameModality::BeginPlay()
 		UE_LOG(LogTemp, Error, TEXT("GameField is null"));
 	}
 
-	/*if (HUDWidgetClass)
-	{
-		// Prendi il PlayerController
-		APlayerController* PC = GetWorld()->GetFirstPlayerController();
-		if (PC)
-		{
-			// Crea il widget e aggiungilo allo schermo
-			HUDInstance = CreateWidget<UHUDWidget>(PC, HUDWidgetClass);
-			if (HUDInstance)
-			{
-				HUDInstance->AddToViewport();
-			}
-		} 
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Player controller non valido"));
-		}
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("HUDWidget non caricato"));
-	}*/
-	
-
 	// set camera position
 	float CameraPosX = ((GameField->TileSize * FieldSize) + ((FieldSize - 1) * GameField->TileSize * GameField->CellPadding)) * 0.5f;
 	float Zposition = 2600.0f;
@@ -77,9 +54,6 @@ void AGameModality::BeginPlay()
 	Players.Add(HumanPlayer);
 	// Random Player
 	auto* AI = GetWorld()->SpawnActor<ARandomPlayer>(FVector(), FRotator());
-
-	// MiniMax Player
-	//auto* AI = GetWorld()->SpawnActor<AMinimaxPlayer>(FVector(), FRotator());
 
 	// AI player = 1
 	Players.Add(AI);
@@ -122,7 +96,7 @@ void AGameModality::SpawnCellUnit(int32 PlayerNumber, const FVector& SpawnPositi
 	}
 					
 	Unit->Init(Type, PlayerNumber, XYPosition); // the tile is an obstacle if Obstacles[i * Size + j] is true
-	const float TileScale = FoundField->TileSize / 140.f;
+	const float TileScale = FoundField->TileSize / 120.f;
 	const float Zscaling = 0.2f;
 	Unit->SetActorScale3D(FVector(TileScale, TileScale, Zscaling));
 }
@@ -134,4 +108,15 @@ int32 AGameModality::GetNextPlayer(int32 Player)
 
 void AGameModality::TurnNextPlayer()
 {
+	Players[0]->IsMyTurn = !Players[0]->IsMyTurn;
+	Players[1]->IsMyTurn = !Players[1]->IsMyTurn;
+
+	if (Players[0]->IsMyTurn)
+	{
+		Players[0]->OnTurn();
+	}
+	else if (Players[1]->IsMyTurn)
+	{
+		Players[1]->OnTurn();
+	}
 }

@@ -147,6 +147,15 @@ void AHumanPlayer::OnResetButtonClicked()
 {
 }
 
+void AHumanPlayer::OnPassButtonClicked()
+{
+	AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
+	if (IsMyTurn)
+	{
+		GameModality->TurnNextPlayer();
+	}
+}
+
 
 
 // Called when the game starts or when spawned
@@ -215,7 +224,8 @@ void AHumanPlayer::OnClick()
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, LocationString);
 
 				GameInstance->bSniperButtonClicked = false;
-				//IsMyTurn = false;
+				
+				GameModality->TurnNextPlayer();
 			}
 		}
 	}
@@ -242,7 +252,8 @@ void AHumanPlayer::OnClick()
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, LocationString);
 
 				GameInstance->bBrawlerButtonClicked = false;
-				//IsMyTurn = false;
+				
+				GameModality->TurnNextPlayer();
 			}
 		}
 	}
@@ -250,9 +261,29 @@ void AHumanPlayer::OnClick()
 	{
 		if (AUnit* CurrUnit = Cast<AUnit>(Hit.GetActor())) {
 			AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
-			GameField->UnHighLight();
-			GameInstance->bIsUnitClicked = false;
-			GameInstance->SelectedUnit = nullptr;
+
+			if (CurrUnit == GameInstance->SelectedUnit && GameField)
+			{
+				GameInstance->SelectedUnit = nullptr;
+				GameField->UnHighLight();
+				GameInstance->bIsUnitClicked = false;
+			}
+			else if (CurrUnit->PlayerNumber == 1 && GameField)
+			{
+				GameInstance->SelectedUnit = CurrUnit;
+				GameField->UnHighLight();
+
+				FVector2D XYPosition = CurrUnit->Position;
+				TArray<bool> Visited;
+				Visited.Init(false, GameField->Size * GameField->Size);
+				BFSMovementRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, CurrUnit->MovementRange, Visited, GameField);
+				BFSAttackRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, CurrUnit->MovementRange, Visited, GameField);
+
+			}
+			else if (!GameField)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Couldn't cast the GameField"));
+			}
 		}
 		else if(ATile* CurrTile = Cast<ATile>(Hit.GetActor()))
 		{
@@ -275,12 +306,11 @@ void AHumanPlayer::OnClick()
 	{
 		if (AUnit* CurrUnit = Cast<AUnit>(Hit.GetActor())) 
 		{
-			//UE_LOG(LogTemp, Warning, TEXT("Entra nella condizione"));
 			GameInstance->bIsUnitClicked = true;
 			GameInstance->SelectedUnit = CurrUnit;
+
 			if (CurrUnit->PlayerNumber == 1) 
 			{
-				//UE_LOG(LogTemp, Warning, TEXT("player number = 1"));
 				AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
 				if (!GameField) 
 				{
@@ -289,8 +319,6 @@ void AHumanPlayer::OnClick()
 				else
 				{
 					FVector2D XYPosition = CurrUnit->Position;
-					//FString LocationString = FString::Printf(TEXT("the unit is in pos (%i, %i)"), static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y));
-					//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, LocationString);
 					TArray<bool> Visited;
 					Visited.Init(false, GameField->Size * GameField->Size);
 					BFSMovementRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, CurrUnit->MovementRange, Visited, GameField);
