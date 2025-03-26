@@ -71,6 +71,7 @@ void ARandomPlayer::OnTurn()
 					Position.Z = 1;
 					AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
 					GameModality->SpawnCellUnit(2, Position, EPawnType::BRAWLER);
+					//GameField->TileArray[X * GameField->Size * Y]->SetTileStatus(2, ETileStatus::OCCUPIED);
 					BrawlerPlaced = true;
 
 					FString LocationString = FString::Printf(TEXT("AI spawned a Brawler at the position (%i, %i)"), X, Y);
@@ -87,6 +88,7 @@ void ARandomPlayer::OnTurn()
 					Position.Z = 1;
 					AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
 					GameModality->SpawnCellUnit(2, Position, EPawnType::SNIPER);
+					//GameField->TileArray[X * GameField->Size * Y]->SetTileStatus(2, ETileStatus::OCCUPIED);
 					SniperPlaced = true;
 
 					FString LocationString = FString::Printf(TEXT("AI spawned a Sniper at the position (%i, %i)"), X, Y);
