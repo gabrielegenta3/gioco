@@ -148,3 +148,19 @@ void UHUDWidget::HideBrawlerButton()
 		BrawlerButton->SetVisibility(ESlateVisibility::Collapsed); // function to hide the button
 	}
 }
+
+void UHUDWidget::HidePassButton()
+{
+    if (PassButton)
+    {
+        PassButton->SetVisibility(ESlateVisibility::Collapsed); // function to show the button
+    }
+}
+
+void UHUDWidget::ShowPassButton()
+{
+    if (PassButton)
+    {
+        PassButton->SetVisibility(ESlateVisibility::Visible); // function to show the button
+    }
+}

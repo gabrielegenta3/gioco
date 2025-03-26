@@ -96,6 +96,7 @@ void AGameModality::SpawnCellUnit(int32 PlayerNumber, const FVector& SpawnPositi
 	}
 					
 	Unit->Init(Type, PlayerNumber, XYPosition); // the tile is an obstacle if Obstacles[i * Size + j] is true
+	//FoundField->TileArray[XYPosition.X * FoundField->Size * XYPosition.Y]->SetTileStatus(ETileStatus::OCCUPIED);
 	const float TileScale = FoundField->TileSize / 120.f;
 	const float Zscaling = 0.2f;
 	Unit->SetActorScale3D(FVector(TileScale, TileScale, Zscaling));

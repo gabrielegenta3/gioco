@@ -59,6 +59,12 @@ protected:
 
 	AUnit* ControlledUnit;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
+	bool SniperPlaced;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
+	bool BrawlerPlaced;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

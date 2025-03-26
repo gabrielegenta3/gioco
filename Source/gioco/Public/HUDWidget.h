@@ -44,4 +44,10 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void HideBrawlerButton();
 
+	UFUNCTION(BlueprintCallable)
+	void HidePassButton();
+
+	UFUNCTION(BlueprintCallable)
+	void ShowPassButton();
+
 };

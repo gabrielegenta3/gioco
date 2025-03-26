@@ -18,7 +18,6 @@ void BFSMovementRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TA
 	int32 startIndex = startX * size + startY;
 	visited[startIndex] = true;
 	GF->TileArray[startIndex]->StaticMeshComponent->SetMaterial(0, GF->TileArray[startIndex]->GreenTile);
-	//GF->TileArray[startIndex]->LightUp();
 
 	while (!queue.IsEmpty())
 	{
@@ -46,7 +45,6 @@ void BFSMovementRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TA
 				if (!visited[newIndex] && GF->TileArray[newIndex]->GetTileStatus() == ETileStatus::EMPTY)
 				{
 					visited[newIndex] = true;
-					//GF->TileArray[newIndex]->StaticMeshComponent->SetMaterial(0, GF->TileArray[newIndex]->GreenTile);
 					GF->TileArray[newIndex]->LightUp();
 
 					queue.Enqueue(FIntPoint(nx, ny));
@@ -96,7 +94,7 @@ void BFSAttackRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TArr
 				if (!visited[newIndex])
 				{
 					visited[newIndex] = true;
-					if(!GF->TileArray[newIndex]->bIsObstacle && GF->TileArray[newIndex]->GetTileStatus() == ETileStatus::OCCUPIED)
+					if(!GF->TileArray[newIndex]->bIsObstacle && GF->TileArray[newIndex]->GetTileStatus() == ETileStatus::OCCUPIED && GF->TileArray[newIndex]->PlayerOwner == 2)
 						GF->TileArray[newIndex]->LightUp();
 
 					queue.Enqueue(FIntPoint(nx, ny));
@@ -125,7 +123,8 @@ AHumanPlayer::AHumanPlayer()
 	// set the default values
 	PlayerNumber = 1;
 
-
+	SniperPlaced = false;
+	BrawlerPlaced = false;
 }
 
 void AHumanPlayer::OnSniperButtonClicked()
@@ -162,7 +161,8 @@ void AHumanPlayer::OnPassButtonClicked()
 void AHumanPlayer::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetActorOfClass(GetWorld(), Agame_PlayerController::StaticClass()));
+	PlayerC->HUD->HidePassButton();
 }
 
 // Called every frame
@@ -224,6 +224,12 @@ void AHumanPlayer::OnClick()
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, LocationString);
 
 				GameInstance->bSniperButtonClicked = false;
+				SniperPlaced = true;
+
+				if (BrawlerPlaced && SniperPlaced)
+				{
+					PlayerC->HUD->ShowPassButton();
+				}
 				
 				GameModality->TurnNextPlayer();
 			}
@@ -252,6 +258,12 @@ void AHumanPlayer::OnClick()
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, LocationString);
 
 				GameInstance->bBrawlerButtonClicked = false;
+				BrawlerPlaced = true;
+
+				if (BrawlerPlaced && SniperPlaced)
+				{
+					PlayerC->HUD->ShowPassButton();
+				}
 				
 				GameModality->TurnNextPlayer();
 			}
@@ -277,7 +289,8 @@ void AHumanPlayer::OnClick()
 				TArray<bool> Visited;
 				Visited.Init(false, GameField->Size * GameField->Size);
 				BFSMovementRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, CurrUnit->MovementRange, Visited, GameField);
-				BFSAttackRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, CurrUnit->MovementRange, Visited, GameField);
+				Visited.Init(false, GameField->Size * GameField->Size);
+				BFSAttackRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, CurrUnit->AttackRange, Visited, GameField);
 
 			}
 			else if (!GameField)
@@ -295,7 +308,10 @@ void AHumanPlayer::OnClick()
 					AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
 					if (GameField)
 					{
+						GameField->TileArray[GameInstance->SelectedUnit->Position.X * GameField->Size + GameInstance->SelectedUnit->Position.Y]->SetTileStatus(-1, ETileStatus::EMPTY);
+						FVector2D Position = GameField->GetXYPositionByRelativeLocation(Destination);
 						GameInstance->SelectedUnit->FindPathAndMove(Destination, GameField);
+						GameField->TileArray[Position.X * GameField->Size + Position.Y]->SetTileStatus(1, ETileStatus::OCCUPIED);
 						GameField->UnHighLight();
 					}
 				}
@@ -322,7 +338,7 @@ void AHumanPlayer::OnClick()
 					TArray<bool> Visited;
 					Visited.Init(false, GameField->Size * GameField->Size);
 					BFSMovementRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, CurrUnit->MovementRange, Visited, GameField);
-					BFSAttackRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, CurrUnit->MovementRange, Visited, GameField);
+					BFSAttackRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, CurrUnit->AttackRange, Visited, GameField);
 				}
 				
 			}

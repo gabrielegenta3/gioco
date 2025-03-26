@@ -61,6 +61,9 @@ void ARandomPlayer::OnTurn()
 
 				if (SniperPlaced || Rand == 0)
 				{
+
+					GameField->TileArray[RandomNumber]->SetTileStatus(2, ETileStatus::OCCUPIED);
+
 					int32 X = RandomNumber / GameField->Size;
 					int32 Y = RandomNumber % GameField->Size;
 			
@@ -68,6 +71,7 @@ void ARandomPlayer::OnTurn()
 					Position.Z = 1;
 					AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
 					GameModality->SpawnCellUnit(2, Position, EPawnType::BRAWLER);
+					BrawlerPlaced = true;
 
 					FString LocationString = FString::Printf(TEXT("AI spawned a Brawler at the position (%i, %i)"), X, Y);
 					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, LocationString);
@@ -83,6 +87,7 @@ void ARandomPlayer::OnTurn()
 					Position.Z = 1;
 					AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
 					GameModality->SpawnCellUnit(2, Position, EPawnType::SNIPER);
+					SniperPlaced = true;
 
 					FString LocationString = FString::Printf(TEXT("AI spawned a Sniper at the position (%i, %i)"), X, Y);
 					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, LocationString);
@@ -91,6 +96,11 @@ void ARandomPlayer::OnTurn()
 				}
 				
 
+			}
+			else
+			{
+				AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
+				GameModality->TurnNextPlayer();
 			}
 			
 		}, 1.5, false);

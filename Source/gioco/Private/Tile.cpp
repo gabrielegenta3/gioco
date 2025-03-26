@@ -163,11 +163,11 @@ void ATile::LightUp()
 		bIsRed = true;
 		UE_LOG(LogTemp, Warning, TEXT("red tile color"));
 	}
-	else if (!bIsObstacle)
+	else if (!bIsObstacle && Status == ETileStatus::EMPTY)
 	{
 		StaticMeshComponent->SetMaterial(0, GreenTile);
 		bIsGreen = true;
-		UE_LOG(LogTemp, Warning, TEXT("green tile color"));
+		//UE_LOG(LogTemp, Warning, TEXT("green tile color"));
 	}
 	else
 	{
