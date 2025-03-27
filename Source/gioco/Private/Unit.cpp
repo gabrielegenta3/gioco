@@ -148,6 +148,23 @@ void AUnit::Init(EPawnType InPawnType, int32 InPlayerNumber, FVector2D Pos)
 	}
 }
 
+bool AUnit::CanAttack()
+{
+	TArray<AActor*> FoundActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AUnit::StaticClass(), FoundActors);
+	for (AActor* Actor : FoundActors)
+	{
+		AUnit* Unit = Cast<AUnit>(Actor);
+		if (Unit && ((Unit->PlayerNumber == 2 && this->PlayerNumber == 1) || (Unit->PlayerNumber == 1 && this->PlayerNumber == 2)))
+		{
+			if (static_cast<int32>(FMath::Abs(this->Position.X - Unit->Position.X) + FMath::Abs(this->Position.Y - Unit->Position.Y)) <= this->AttackRange) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 // Called every frame
 void AUnit::Tick(float DeltaTime)
 {
@@ -164,6 +181,8 @@ void AUnit::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 void AUnit::SelfDestroy()
 {
+	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+	GameField->TileArray[this->Position.X * GameField->Size + this->Position.Y]->SetTileStatus(-1, ETileStatus::EMPTY);
 	Destroy();
 }
 
@@ -196,6 +215,31 @@ void AUnit::FindPathAndMove(const FVector& Destination, AGameField* GameField)
 	// Avvia il movimento passo-passo
 	MoveAlongPath(WorldPositions);
 }
+
+void AUnit::Attack(AUnit* Target)
+{
+	int32 Damage = FMath::RandRange(this->MinDamage, this->MaxDamage);
+	Target->TakeDamage(Damage);
+
+	FString LocationString = FString::Printf(TEXT("%i damage dealt"), Damage);
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, LocationString);
+}
+
+void AUnit::TakeDamage(const int32 Damage)
+{
+	if (Damage > HP)
+	{
+		HP = 0;
+		this->SelfDestroy();
+	}
+	else
+	{
+		HP -= Damage;
+	}
+}
+
+
+
 
 // BFS to find a path (4 directions) from StartIndex to GoalIndex
 bool AUnit::FindPathBFS(int32 StartIndex, int32 GoalIndex, AGameField* GF)

@@ -6,10 +6,6 @@
 /NAME:"UnrealEditor-RiderDebuggerSupport-0018.dll"
 /IGNORE:4221
 /NODEFAULTLIB
-"C:\Gabri\Documenti\Unreal Engine\gioco\Plugins\Developer\RiderLink\Intermediate\Build\Win64\x64\UnrealEditor\Development\RiderDebuggerSupport\BlueprintStackGetter.cpp.obj"
-"C:\Gabri\Documenti\Unreal Engine\gioco\Plugins\Developer\RiderLink\Intermediate\Build\Win64\x64\UnrealEditor\Development\RiderDebuggerSupport\DebugLogger.cpp.obj"
-"C:\Gabri\Documenti\Unreal Engine\gioco\Plugins\Developer\RiderLink\Intermediate\Build\Win64\x64\UnrealEditor\Development\RiderDebuggerSupport\RiderDebuggerSupport.cpp.obj"
-"C:\Gabri\Documenti\Unreal Engine\gioco\Plugins\Developer\RiderLink\Intermediate\Build\Win64\x64\UnrealEditor\Development\RiderDebuggerSupport\UnrealFunctions.cpp.obj"
-"C:\Gabri\Documenti\Unreal Engine\gioco\Plugins\Developer\RiderLink\Intermediate\Build\Win64\x64\UnrealEditor\Development\RiderDebuggerSupport\WideStringWrapper.cpp.obj"
+"C:\Gabri\Documenti\Unreal Engine\gioco\Plugins\Developer\RiderLink\Intermediate\Build\Win64\x64\UnrealEditor\Development\RiderDebuggerSupport\Module.RiderDebuggerSupport.cpp.obj"
 "C:\Gabri\Documenti\Unreal Engine\gioco\Plugins\Developer\RiderLink\Intermediate\Build\Win64\x64\UnrealEditor\Development\RiderDebuggerSupport\Default.rc2.res"
 /OUT:"C:\Gabri\Documenti\Unreal Engine\gioco\Plugins\Developer\RiderLink\Intermediate\Build\Win64\x64\UnrealEditor\Development\RiderDebuggerSupport\UnrealEditor-RiderDebuggerSupport-0018.lib"

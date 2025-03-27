@@ -20,6 +20,12 @@ public:
 
 	// calling to move a unit to a destination
 	void FindPathAndMove(const FVector& Destination, AGameField* GameField);
+
+	// method to attack another unit
+	void Attack(AUnit* Target);
+
+	// method to handle the damage you can take
+	void TakeDamage(const int32 Damage);
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -86,6 +92,9 @@ public:
 
 	// called to initialize the unit
 	void Init(EPawnType InPawnType, int32 InPlayerNumber, FVector2D Pos);
+
+	// method to check if the unit has any enemy at attack range
+	bool CanAttack();
 
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

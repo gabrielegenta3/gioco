@@ -109,15 +109,21 @@ int32 AGameModality::GetNextPlayer(int32 Player)
 
 void AGameModality::TurnNextPlayer()
 {
+	if (Players.Num() < 2 || !Players[0] || !Players[1])
+	{
+		UE_LOG(LogTemp, Error, TEXT("TurnNextPlayer(): Players array is invalid!"));
+		return;
+	}
+
+	// Cambia il turno
 	Players[0]->IsMyTurn = !Players[0]->IsMyTurn;
 	Players[1]->IsMyTurn = !Players[1]->IsMyTurn;
 
-	if (Players[0]->IsMyTurn)
-	{
-		Players[0]->OnTurn();
-	}
-	else if (Players[1]->IsMyTurn)
-	{
-		Players[1]->OnTurn();
-	}
+	// Determina il giocatore corrente
+	IPlayerInterface* Player = Cast<IPlayerInterface>(Players[0]->IsMyTurn ? Players[0] : Players[1]);
+
+	UE_LOG(LogTemp, Warning, TEXT("Next turn: %s"), Players[0]->IsMyTurn ? TEXT("PLAYER") : TEXT("CPU"));
+
+	// Attiva il turno del giocatore corrente
+	Player->OnTurn();
 }

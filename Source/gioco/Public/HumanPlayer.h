@@ -43,9 +43,8 @@ public:
 	UFUNCTION()
 	void OnPassButtonClicked();
 
-	void MoveUnitAlongPath(AUnit* Unit, const TArray<FVector>& PathPositions, float StepTime);
-
-	void MoveStep();
+	// method to check if the unit has any enemy at attack range
+	bool CanAttack();
 
 protected:
 	// Called when the game starts or when spawned
@@ -58,6 +57,18 @@ protected:
 	FTimerHandle MoveTimerHandle;
 
 	AUnit* ControlledUnit;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
+	bool SniperMoved;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
+	bool BrawlerMoved;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
+	bool SniperAttacked;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
+	bool BrawlerAttacked;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
 	bool SniperPlaced;

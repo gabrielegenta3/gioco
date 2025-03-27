@@ -94,7 +94,7 @@ void BFSAttackRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TArr
 				if (!visited[newIndex])
 				{
 					visited[newIndex] = true;
-					if(!GF->TileArray[newIndex]->bIsObstacle && GF->TileArray[newIndex]->GetTileStatus() == ETileStatus::OCCUPIED && GF->TileArray[newIndex]->PlayerOwner == 2)
+					if(!GF->TileArray[newIndex]->bIsObstacle && GF->TileArray[newIndex]->PlayerOwner == 2)
 						GF->TileArray[newIndex]->LightUp();
 
 					queue.Enqueue(FIntPoint(nx, ny));
@@ -125,21 +125,28 @@ AHumanPlayer::AHumanPlayer()
 
 	SniperPlaced = false;
 	BrawlerPlaced = false;
+	SniperMoved = false;
+	BrawlerMoved = false;
 }
 
 void AHumanPlayer::OnSniperButtonClicked()
 {
-	
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, TEXT("Sniper Button Clicked"));
-	GameInstance->bSniperButtonClicked = true;
-	GameInstance->bBrawlerButtonClicked = false;
+	if (IsMyTurn)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, TEXT("Sniper Button Clicked"));
+		GameInstance->bSniperButtonClicked = true;
+		GameInstance->bBrawlerButtonClicked = false;
+	}
 }
 
 void AHumanPlayer::OnBrawlerButtonClicked()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, TEXT("Brawler Button Clicked"));
-	GameInstance->bBrawlerButtonClicked = true;
-	GameInstance->bSniperButtonClicked = false;
+	if (IsMyTurn)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, TEXT("Brawler Button Clicked"));
+		GameInstance->bBrawlerButtonClicked = true;
+		GameInstance->bSniperButtonClicked = false;
+	}
 }
 
 void AHumanPlayer::OnResetButtonClicked()
@@ -182,6 +189,10 @@ void AHumanPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 void AHumanPlayer::OnTurn()
 {
 	IsMyTurn = true;
+	SniperAttacked = false;
+	BrawlerAttacked = false;
+	SniperMoved = false;
+	BrawlerMoved = false;
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, TEXT("Your Turn"));	
 }
 
@@ -201,7 +212,7 @@ void AHumanPlayer::OnClick()
 	FHitResult Hit = FHitResult(ForceInit);
 	// GetHitResultUnderCursor function sends a ray from the mouse cursor on the screen and returns the hit result
 	GetWorld()->GetFirstPlayerController()->GetHitResultUnderCursor(ECollisionChannel::ECC_Pawn, true, Hit);
-	if (Hit.bBlockingHit && IsMyTurn && GameInstance->bSniperButtonClicked)
+	if (Hit.bBlockingHit && IsMyTurn && GameInstance->bSniperButtonClicked)  // if sniper button is clicked and the player clicked on a valid tile he spawns his sniper
 	{
 		if (ATile* CurrTile = Cast<ATile>(Hit.GetActor()))
 		{
@@ -230,12 +241,12 @@ void AHumanPlayer::OnClick()
 				{
 					PlayerC->HUD->ShowPassButton();
 				}
-				
+				UE_LOG(LogTemp, Warning, TEXT("next turn 1"));
 				GameModality->TurnNextPlayer();
 			}
 		}
-	}
-	else if (Hit.bBlockingHit && IsMyTurn && GameInstance->bBrawlerButtonClicked)
+	} 
+	else if (Hit.bBlockingHit && IsMyTurn && GameInstance->bBrawlerButtonClicked)  // if brawler button is clicked and the player clicked on a valid tile he spawns his brawler
 	{
 		if (ATile* CurrTile = Cast<ATile>(Hit.GetActor()))
 		{
@@ -264,41 +275,88 @@ void AHumanPlayer::OnClick()
 				{
 					PlayerC->HUD->ShowPassButton();
 				}
-				
+				UE_LOG(LogTemp, Warning, TEXT("next turn 1"));
 				GameModality->TurnNextPlayer();
 			}
 		}
 	}
-	else if (Hit.bBlockingHit && IsMyTurn && GameInstance->bIsUnitClicked)
-	{
+	else if (Hit.bBlockingHit && IsMyTurn && GameInstance->bIsUnitClicked)  // if player already clicked on a unit you can click another unit to attack him if you can, click your unit to 
+	{																		// unhighlight tiles, click your other unit to highlight. You could also click another tile or unit but it does nothing obv
 		if (AUnit* CurrUnit = Cast<AUnit>(Hit.GetActor())) {
 			AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
 
-			if (CurrUnit == GameInstance->SelectedUnit && GameField)
+			if (CurrUnit == GameInstance->SelectedUnit && GameField)	//  unhighlight
 			{
 				GameInstance->SelectedUnit = nullptr;
 				GameField->UnHighLight();
 				GameInstance->bIsUnitClicked = false;
 			}
-			else if (CurrUnit->PlayerNumber == 1 && GameField)
+			else if (CurrUnit->PlayerNumber == 1 && GameField)  // highlight other
 			{
 				GameInstance->SelectedUnit = CurrUnit;
 				GameField->UnHighLight();
 
 				FVector2D XYPosition = CurrUnit->Position;
 				TArray<bool> Visited;
-				Visited.Init(false, GameField->Size * GameField->Size);
-				BFSMovementRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, CurrUnit->MovementRange, Visited, GameField);
-				Visited.Init(false, GameField->Size * GameField->Size);
-				BFSAttackRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, CurrUnit->AttackRange, Visited, GameField);
 
+				if ((CurrUnit->PawnType == EPawnType::SNIPER && !SniperMoved) || (CurrUnit->PawnType == EPawnType::BRAWLER && !BrawlerMoved))
+				{
+					Visited.Init(false, GameField->Size * GameField->Size);
+					BFSMovementRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, CurrUnit->MovementRange, Visited, GameField);
+					Visited.Init(false, GameField->Size * GameField->Size);
+					BFSAttackRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, CurrUnit->AttackRange, Visited, GameField);
+				}
+				else if ((CurrUnit->PawnType == EPawnType::SNIPER && !SniperAttacked) || (CurrUnit->PawnType == EPawnType::BRAWLER && !BrawlerAttacked))
+				{
+					Visited.Init(false, GameField->Size * GameField->Size);
+					BFSAttackRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, CurrUnit->AttackRange, Visited, GameField);
+				}
+				else
+				{
+					GameInstance->SelectedUnit = nullptr;
+					GameInstance->bIsUnitClicked = false;
+				}
+					
+
+			}
+			else if (CurrUnit->PlayerNumber == 2 && GameField)  // attack unit
+			{
+				if (GameField->TileArray[CurrUnit->Position.X * GameField->Size + CurrUnit->Position.Y]->bIsRed)
+				{
+					GameInstance->SelectedUnit->Attack(CurrUnit);
+					GameField->UnHighLight();
+
+					if (GameInstance->SelectedUnit->PawnType == EPawnType::BRAWLER)
+					{
+						BrawlerAttacked = true;
+						BrawlerMoved = true;
+					}
+					else if (GameInstance->SelectedUnit->PawnType == EPawnType::SNIPER)
+					{
+						SniperAttacked = true;
+						SniperMoved = true;
+					}
+
+
+					GameInstance->SelectedUnit = nullptr;
+					GameInstance->bIsUnitClicked = false;
+
+					if (SniperMoved && BrawlerMoved)
+					{
+						if ((SniperAttacked && BrawlerAttacked) || !this->CanAttack())
+						{
+							AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
+							GameModality->TurnNextPlayer();
+						}
+					}
+				}
 			}
 			else if (!GameField)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("Couldn't cast the GameField"));
 			}
 		}
-		else if(ATile* CurrTile = Cast<ATile>(Hit.GetActor()))
+		else if(ATile* CurrTile = Cast<ATile>(Hit.GetActor()))  // if you click an highlighted tile you can move
 		{
 			if (CurrTile->bIsGreen)
 			{
@@ -312,13 +370,35 @@ void AHumanPlayer::OnClick()
 						FVector2D Position = GameField->GetXYPositionByRelativeLocation(Destination);
 						GameInstance->SelectedUnit->FindPathAndMove(Destination, GameField);
 						GameField->TileArray[Position.X * GameField->Size + Position.Y]->SetTileStatus(1, ETileStatus::OCCUPIED);
+
+						if (GameInstance->SelectedUnit->PawnType == EPawnType::BRAWLER && !BrawlerMoved)
+						{
+							BrawlerMoved = true;
+						}
+						else if (GameInstance->SelectedUnit->PawnType == EPawnType::SNIPER && !SniperMoved)
+						{
+							SniperMoved = true;
+						}
+
+
 						GameField->UnHighLight();
+						GameInstance->SelectedUnit = nullptr;
+						GameInstance->bIsUnitClicked = false;
+
+						if (SniperMoved && BrawlerMoved)
+						{
+							if ((SniperAttacked && BrawlerAttacked) || !this->CanAttack())
+							{
+								AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
+								GameModality->TurnNextPlayer();
+							}
+						}
 					}
 				}
 			}
 		}
 	}
-	else if (Hit.bBlockingHit && IsMyTurn)
+	else if (Hit.bBlockingHit && IsMyTurn)  // if nothing is clicked you can highlight
 	{
 		if (AUnit* CurrUnit = Cast<AUnit>(Hit.GetActor())) 
 		{
@@ -336,17 +416,63 @@ void AHumanPlayer::OnClick()
 				{
 					FVector2D XYPosition = CurrUnit->Position;
 					TArray<bool> Visited;
-					Visited.Init(false, GameField->Size * GameField->Size);
-					BFSMovementRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, CurrUnit->MovementRange, Visited, GameField);
-					BFSAttackRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, CurrUnit->AttackRange, Visited, GameField);
+
+					if ((CurrUnit->PawnType == EPawnType::SNIPER && !SniperMoved) || (CurrUnit->PawnType == EPawnType::BRAWLER && !BrawlerMoved))
+					{
+						Visited.Init(false, GameField->Size * GameField->Size);
+						BFSMovementRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, CurrUnit->MovementRange, Visited, GameField);
+						Visited.Init(false, GameField->Size * GameField->Size);
+						BFSAttackRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, CurrUnit->AttackRange, Visited, GameField);
+					}
+					else if ((CurrUnit->PawnType == EPawnType::SNIPER && !SniperAttacked) || (CurrUnit->PawnType == EPawnType::BRAWLER && !BrawlerAttacked))
+					{
+						Visited.Init(false, GameField->Size * GameField->Size);
+						BFSAttackRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, CurrUnit->AttackRange, Visited, GameField);
+					}
+					else
+					{
+						GameInstance->SelectedUnit = nullptr;
+						GameInstance->bIsUnitClicked = false;
+					}
+						
 				}
 				
 			}
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Couldn't cast the Unit you clicked on"));
+			//UE_LOG(LogTemp, Warning, TEXT("Couldn't cast the Unit you clicked on"));
 		}
 	}
 }
 
+
+
+bool AHumanPlayer::CanAttack()
+{
+	TArray<AActor*> FoundActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AUnit::StaticClass(), FoundActors);
+	bool condition = false;
+	for (AActor* Actor : FoundActors)
+	{
+		AUnit* Unit = Cast<AUnit>(Actor);  // for each Unit it controls if it's his Unit, if it has already attacked or if he can do it
+		if (Unit && (Unit->PlayerNumber == 1))  // we need to see if at least one can attack
+		{
+			condition = condition || (((Unit->PawnType == EPawnType::BRAWLER && !this->BrawlerAttacked) || (Unit->PawnType == EPawnType::SNIPER && !this->SniperAttacked)) && Unit->CanAttack());
+		} 
+
+		//if (condition)
+		//	return condition;
+	}
+	if (condition) 
+	{
+		UE_LOG(LogTemp, Warning, TEXT("CanAttack(): true"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("CanAttack(): false"));
+	}
+		
+
+	return condition;
+}
