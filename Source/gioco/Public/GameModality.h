@@ -60,7 +60,7 @@ public:
 	void ChoosePlayerAndStartGame();
 
 	// set the cell pawn
-	void SpawnCellUnit(int32 PlayerNumber, const FVector& SpawnPosition, const EPawnType Type);
+	AUnit* SpawnCellUnit(int32 PlayerNumber, const FVector& SpawnPosition, const EPawnType Type);
 
 	// get the next player index
 	int32 GetNextPlayer(int32 Player);

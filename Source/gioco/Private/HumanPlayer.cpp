@@ -7,7 +7,7 @@
 
 // function to check in which tile a Unit could go based on their max step
 // function to visit all the cells of the map
-void BFSMovementRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TArray<bool>& visited, AGameField* GF)
+void AHumanPlayer::BFSMovementRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TArray<bool>& visited, AGameField* GF)
 {
 	TQueue<FIntPoint> queue;
 	TQueue<int32> distanceQueue; // per salvare i passi correnti
@@ -57,7 +57,7 @@ void BFSMovementRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TA
 
 
 // BFS to find attackable units
-void BFSAttackRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TArray<bool>& visited, AGameField* GF)
+void AHumanPlayer::BFSAttackRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TArray<bool>& visited, AGameField* GF)
 {
 	TQueue<FIntPoint> queue;
 	TQueue<int32> distanceQueue; // per salvare i passi correnti
@@ -224,7 +224,15 @@ void AHumanPlayer::OnClick()
 				SpawnPosition.Z += 1;
 
 				AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
-				GameModality->SpawnCellUnit(1, SpawnPosition, EPawnType::SNIPER);
+				AUnit* Unit = GameModality->SpawnCellUnit(1, SpawnPosition, EPawnType::SNIPER);
+				if (Unit)
+				{
+					MyUnits.Add(Unit);
+				}
+				else
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Null Unit"));
+				}
 
 				Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetActorOfClass(GetWorld(), Agame_PlayerController::StaticClass()));
 				PlayerC->HUD->HideSniperButton();
@@ -258,7 +266,16 @@ void AHumanPlayer::OnClick()
 				SpawnPosition.Z += 1;
 
 				AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
-				GameModality->SpawnCellUnit(1, SpawnPosition, EPawnType::BRAWLER);
+				AUnit* Unit = GameModality->SpawnCellUnit(1, SpawnPosition, EPawnType::BRAWLER);
+				if (Unit)
+				{
+					MyUnits.Add(Unit);
+				}
+				else
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Null Unit"));
+				}
+				
 
 				Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetActorOfClass(GetWorld(), Agame_PlayerController::StaticClass()));
 				PlayerC->HUD->HideBrawlerButton();
@@ -398,7 +415,7 @@ void AHumanPlayer::OnClick()
 			}
 		}
 	}
-	else if (Hit.bBlockingHit && IsMyTurn)  // if nothing is clicked you can highlight
+	else if (Hit.bBlockingHit && IsMyTurn && !GameInstance->bIsMoving)  // if nothing is clicked you can highlight
 	{
 		if (AUnit* CurrUnit = Cast<AUnit>(Hit.GetActor())) 
 		{
@@ -450,19 +467,19 @@ void AHumanPlayer::OnClick()
 
 bool AHumanPlayer::CanAttack()
 {
-	TArray<AActor*> FoundActors;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AUnit::StaticClass(), FoundActors);
 	bool condition = false;
-	for (AActor* Actor : FoundActors)
+	for (AUnit* Unit : MyUnits)
 	{
-		AUnit* Unit = Cast<AUnit>(Actor);  // for each Unit it controls if it's his Unit, if it has already attacked or if he can do it
-		if (Unit && (Unit->PlayerNumber == 1))  // we need to see if at least one can attack
+		if (Unit)  // we need to see if at least one can attack
 		{
 			condition = condition || (((Unit->PawnType == EPawnType::BRAWLER && !this->BrawlerAttacked) || (Unit->PawnType == EPawnType::SNIPER && !this->SniperAttacked)) && Unit->CanAttack());
 		} 
 
-		//if (condition)
-		//	return condition;
+		if (condition)
+		{
+			return condition;
+		}
+			
 	}
 	if (condition) 
 	{

@@ -21,13 +21,64 @@ public:
 
 	// game instance reference
 	Ugame_GameInstance* GameInstance;
+	
+	TArray<AUnit*> MyUnits;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
+	bool SniperMoved;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
+	bool BrawlerMoved;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
+	bool SniperAttacked;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
+	bool BrawlerAttacked;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
 	bool SniperPlaced;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
 	bool BrawlerPlaced;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
+	bool bIsSmart;  //^=.=^
+
+	FTimerHandle TimerHandle1;
+
+	FTimerHandle TimerHandle2;
+
+	FTimerHandle BrawlerHighlightTimerHandler;
+
+	FTimerHandle SniperHighlightTimerHandler;
+
+	FTimerHandle BrawlerMoveTimerHandler;
+
+	FTimerHandle SniperMoveTimerHandler;
+
+	FTimerHandle BrawlerAttackTimerHandler;
+
+	FTimerHandle SniperAttackTimerHandler;
+
+	
+	// function to check in which tile a Unit could go based on their max step
+	void BFSMovementRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TArray<bool>& visited, AGameField* GF);
+
+	// function to check in which tile a Unit could attack based on their range
+	void BFSAttackRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TArray<bool>& visited, AGameField* GF);
+
+	void HighlightAndMoveBrawler();
+
+	void HighlightAndMoveSniper();
+
+	void MoveBrawler();
+
+	void MoveSniper();
 
 public:	
 	// Called every frame

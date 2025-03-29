@@ -40,6 +40,10 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
 	bool bIsUnitClicked = false;
 
+	// flag to check if unit is moving
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
+	bool bIsMoving = false;
+
 	UPROPERTY(BlueprintReadOnly)
 	AUnit* SelectedUnit;
 

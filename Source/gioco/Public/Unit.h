@@ -27,6 +27,10 @@ public:
 	// method to handle the damage you can take
 	void TakeDamage(const int32 Damage);
 protected:
+	// constants
+	static constexpr int32 MinCounter = 1;
+	static constexpr int32 MaxCounter = 3;
+
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 

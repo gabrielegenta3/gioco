@@ -73,26 +73,26 @@ void AGameModality::ChoosePlayerAndStartGame()
 	Players[CurrentPlayer]->OnTurn();
 }
 
-void AGameModality::SpawnCellUnit(int32 PlayerNumber, const FVector& SpawnPosition, const EPawnType Type)
+AUnit* AGameModality::SpawnCellUnit(int32 PlayerNumber, const FVector& SpawnPosition, const EPawnType Type)
 {
 	AGameField* FoundField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
 	if (!FoundField)
 	{
         UE_LOG(LogTemp, Error, TEXT("AGameField non trovato! Impossibile spawnare unita'."));
-		return;
+		return nullptr;
 	}
 	FVector2D XYPosition =  FoundField->GetXYPositionByRelativeLocation(SpawnPosition);
 	if (!UnitClass)
 	{
 		UE_LOG(LogTemp, Error, TEXT("UnitClass non è stato inizializzato!"));
-		return;
+		return nullptr;
 	}
 	
 	AUnit* Unit = GetWorld()->SpawnActor<AUnit>(UnitClass, SpawnPosition, FRotator::ZeroRotator);
 	if (!Unit)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Impossibile spawnare AUnit a %s"), *SpawnPosition.ToString());
-		return;
+		return nullptr;
 	}
 					
 	Unit->Init(Type, PlayerNumber, XYPosition); // the tile is an obstacle if Obstacles[i * Size + j] is true
@@ -100,6 +100,8 @@ void AGameModality::SpawnCellUnit(int32 PlayerNumber, const FVector& SpawnPositi
 	const float TileScale = FoundField->TileSize / 120.f;
 	const float Zscaling = 0.2f;
 	Unit->SetActorScale3D(FVector(TileScale, TileScale, Zscaling));
+	
+	return Unit;
 }
 
 int32 AGameModality::GetNextPlayer(int32 Player)

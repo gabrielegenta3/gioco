@@ -31,6 +31,8 @@ public:
 	// game instance reference 
 	Ugame_GameInstance* GameInstance;
 
+	TArray<AUnit*> MyUnits;
+
 	UFUNCTION()
 	void OnSniperButtonClicked();
 
@@ -75,6 +77,12 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
 	bool BrawlerPlaced;
+
+	// function to check in which tile a Unit could go based on their max step
+	void BFSMovementRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TArray<bool>& visited, AGameField* GF);
+
+	// function to check in which tile a Unit could attack based on their range
+	void BFSAttackRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TArray<bool>& visited, AGameField* GF);
 
 public:	
 	// Called every frame

@@ -32,7 +32,6 @@ class GIOCO_API IPlayerInterface
 public:
 	int32 PlayerNumber;
 	bool IsMyTurn = false;
-	//EPawnType PawnType;
 
 	virtual void OnTurn() {};
 	virtual void OnWin() {};
