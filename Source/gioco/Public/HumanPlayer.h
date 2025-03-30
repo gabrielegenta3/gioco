@@ -58,6 +58,7 @@ protected:
 
 	FTimerHandle MoveTimerHandle;
 
+
 	AUnit* ControlledUnit;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")

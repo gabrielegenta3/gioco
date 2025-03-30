@@ -386,6 +386,7 @@ void AHumanPlayer::OnClick()
 						GameField->TileArray[GameInstance->SelectedUnit->Position.X * GameField->Size + GameInstance->SelectedUnit->Position.Y]->SetTileStatus(-1, ETileStatus::EMPTY);
 						FVector2D Position = GameField->GetXYPositionByRelativeLocation(Destination);
 						GameInstance->SelectedUnit->FindPathAndMove(Destination, GameField);
+						GameField->UnHighLight();
 						GameField->TileArray[Position.X * GameField->Size + Position.Y]->SetTileStatus(1, ETileStatus::OCCUPIED);
 
 						if (GameInstance->SelectedUnit->PawnType == EPawnType::BRAWLER && !BrawlerMoved)
@@ -398,18 +399,22 @@ void AHumanPlayer::OnClick()
 						}
 
 
-						GameField->UnHighLight();
+						
 						GameInstance->SelectedUnit = nullptr;
 						GameInstance->bIsUnitClicked = false;
 
-						if (SniperMoved && BrawlerMoved)
-						{
-							if ((SniperAttacked && BrawlerAttacked) || !this->CanAttack())
+						GetWorldTimerManager().SetTimer(MoveTimerHandle, [&]()
 							{
-								AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
-								GameModality->TurnNextPlayer();
-							}
-						}
+								if (SniperMoved && BrawlerMoved)
+								{
+									if ((SniperAttacked && BrawlerAttacked) || !this->CanAttack())
+									{
+										AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
+										GameModality->TurnNextPlayer();
+									}
+								}
+							}, 1, false);
+						
 					}
 				}
 			}
@@ -468,19 +473,27 @@ void AHumanPlayer::OnClick()
 bool AHumanPlayer::CanAttack()
 {
 	bool condition = false;
+	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
 	for (AUnit* Unit : MyUnits)
 	{
 		if (Unit)  // we need to see if at least one can attack
 		{
-			condition = condition || (((Unit->PawnType == EPawnType::BRAWLER && !this->BrawlerAttacked) || (Unit->PawnType == EPawnType::SNIPER && !this->SniperAttacked)) && Unit->CanAttack());
-		} 
-
-		if (condition)
-		{
-			return condition;
+			//condition = condition || (((Unit->PawnType == EPawnType::BRAWLER && !this->BrawlerAttacked) || (Unit->PawnType == EPawnType::SNIPER && !this->SniperAttacked)) && Unit->CanAttack());
+			TArray<bool> Visited;
+			Visited.Init(false, GameField->Size * GameField->Size);
+			BFSAttackRange(static_cast<int32>(Unit->Position.X), static_cast<int32>(Unit->Position.Y), GameField->Size, Unit->AttackRange, Visited, GameField);
+			for (ATile* Tile : GameField->TileArray)
+			{
+				if (Tile->bIsRed)
+				{
+					condition = true;
+					GameField->UnHighLight();
+					break;
+				}
+			}
 		}
-			
 	}
+
 	if (condition) 
 	{
 		UE_LOG(LogTemp, Warning, TEXT("CanAttack(): true"));
@@ -488,6 +501,7 @@ bool AHumanPlayer::CanAttack()
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("CanAttack(): false"));
+		GameField->UnHighLight();
 	}
 		
 

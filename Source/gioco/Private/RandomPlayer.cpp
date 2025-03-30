@@ -126,6 +126,7 @@ void ARandomPlayer::HighlightAndMoveBrawler()
 	TArray<bool> Visited;
 	Visited.Init(false, GameField->Size * GameField->Size);
 	BFSMovementRange(static_cast<int32>(Brawler->Position.X), static_cast<int32>(Brawler->Position.Y), GameField->Size, Brawler->MovementRange, Visited, GameField);
+	Visited.Init(false, GameField->Size * GameField->Size);
 	BFSAttackRange(static_cast<int32>(Brawler->Position.X), static_cast<int32>(Brawler->Position.Y), GameField->Size, Brawler->AttackRange, Visited, GameField);
 
 	GetWorldTimerManager().SetTimer(BrawlerMoveTimerHandler, this, &ARandomPlayer::MoveBrawler, 1.f, false);
@@ -154,6 +155,7 @@ void ARandomPlayer::HighlightAndMoveSniper()
 	TArray<bool> Visited;
 	Visited.Init(false, GameField->Size * GameField->Size);
 	BFSMovementRange(static_cast<int32>(Sniper->Position.X), static_cast<int32>(Sniper->Position.Y), GameField->Size, Sniper->MovementRange, Visited, GameField);
+	Visited.Init(false, GameField->Size * GameField->Size);
 	BFSAttackRange(static_cast<int32>(Sniper->Position.X), static_cast<int32>(Sniper->Position.Y), GameField->Size, Sniper->AttackRange, Visited, GameField);
 
 	GetWorldTimerManager().SetTimer(SniperMoveTimerHandler, this, &ARandomPlayer::MoveSniper, 1.f, false);
@@ -211,7 +213,7 @@ void ARandomPlayer::MoveBrawler()
 	TArray<ATile*> VisitableTiles;
 	ATile* ClosestToSniper = nullptr;
 	ATile* ClosestToBrawler = nullptr;
-	int32 SniperDistance = INT_MAX, BrawlerDistance = INT_MAX;
+	int32 SniperDistance = INT_MAX, BrawlerDistance = INT_MAX, UnitDistanceToSniperTile = INT_MAX, UnitDistanceToBrawlerTile;
 
 	for (ATile* Tile : GameField->TileArray)
 	{
@@ -220,38 +222,58 @@ void ARandomPlayer::MoveBrawler()
 			int32 X = GameField->GetXYPositionByRelativeLocation(Tile->GetActorLocation()).X;
 			int32 Y = GameField->GetXYPositionByRelativeLocation(Tile->GetActorLocation()).Y;
 
-			int32 DistanceToSniper = INT_MAX, DistanceToBrawler = INT_MAX;
+			int32 DistanceToSniper = INT_MAX, DistanceToBrawler = INT_MAX, TempUnitDistanceToSniper = INT_MAX, TempUnitDistanceToBrawler = INT_MAX;
 
 			if (EnemySniper)
 			{
 				DistanceToSniper = FMath::Abs(X - static_cast<int32>(EnemySniper->Position.X)) + FMath::Abs(Y - static_cast<int32>(EnemySniper->Position.Y));
+				TempUnitDistanceToSniper = FMath::Abs(X - static_cast<int32>(Brawler->Position.X)) + FMath::Abs(Y - static_cast<int32>(Brawler->Position.Y));
 			}
 			
 			if (EnemyBrawler)
 			{
 				DistanceToBrawler = FMath::Abs(X - static_cast<int32>(EnemyBrawler->Position.X)) + FMath::Abs(Y - static_cast<int32>(EnemyBrawler->Position.Y));
+				TempUnitDistanceToBrawler = FMath::Abs(X - static_cast<int32>(Brawler->Position.X)) + FMath::Abs(Y - static_cast<int32>(Brawler->Position.Y));
 			}
 
 			if (DistanceToSniper < SniperDistance)
 			{
 				SniperDistance = DistanceToSniper;
+				UnitDistanceToSniperTile = TempUnitDistanceToSniper;
 				ClosestToSniper = Tile;
+			}
+			else if (DistanceToSniper == SniperDistance)
+			{
+				if (TempUnitDistanceToSniper < UnitDistanceToSniperTile)
+				{
+					UnitDistanceToSniperTile = TempUnitDistanceToSniper;
+					ClosestToSniper = Tile;
+				}
 			}
 
 			if (DistanceToBrawler < BrawlerDistance)
 			{
 				BrawlerDistance = DistanceToBrawler;
+				UnitDistanceToBrawlerTile = TempUnitDistanceToBrawler;
 				ClosestToBrawler = Tile;
+			}
+			else if (DistanceToBrawler == BrawlerDistance)
+			{
+				if (TempUnitDistanceToBrawler < UnitDistanceToBrawlerTile)
+				{
+					UnitDistanceToBrawlerTile = TempUnitDistanceToBrawler;
+					ClosestToBrawler = Tile;
+				}
 			}
 		}
 	}
 
 
-	if (ClosestToSniper && (SniperDistance < BrawlerDistance || RandomNumber == 0) && (SniperDistance > 0))
+	if (ClosestToSniper && ((SniperDistance < BrawlerDistance) || (SniperDistance == BrawlerDistance && RandomNumber == 0)) && (SniperDistance > 0))
 	{
 		XYPosition = GameField->GetXYPositionByRelativeLocation(ClosestToSniper->GetActorLocation());
 	}
-	else if (ClosestToBrawler && (SniperDistance > BrawlerDistance || RandomNumber == 1) && (BrawlerDistance > 0))
+	else if (ClosestToBrawler && (SniperDistance > BrawlerDistance || (SniperDistance == BrawlerDistance && RandomNumber == 1)) && (BrawlerDistance > 0))
 	{
 		XYPosition = GameField->GetXYPositionByRelativeLocation(ClosestToBrawler->GetActorLocation());
 	}
@@ -320,7 +342,7 @@ void ARandomPlayer::MoveSniper()
 	TArray<ATile*> VisitableTiles;
 	ATile* ClosestToSniper = nullptr;
 	ATile* ClosestToBrawler = nullptr;
-	int32 SniperDistance = INT_MAX, BrawlerDistance = INT_MAX;
+	int32 SniperDistance = INT_MAX, BrawlerDistance = INT_MAX, UnitDistanceToSniperTile = INT_MAX, UnitDistanceToBrawlerTile;
 
 	for (ATile* Tile : GameField->TileArray)
 	{
@@ -329,37 +351,57 @@ void ARandomPlayer::MoveSniper()
 			int32 X = GameField->GetXYPositionByRelativeLocation(Tile->GetActorLocation()).X;
 			int32 Y = GameField->GetXYPositionByRelativeLocation(Tile->GetActorLocation()).Y;
 
-			int32 DistanceToSniper = INT_MAX, DistanceToBrawler = INT_MAX;
+			int32 DistanceToSniper = INT_MAX, DistanceToBrawler = INT_MAX, TempUnitDistanceToSniper = INT_MAX, TempUnitDistanceToBrawler = INT_MAX;
 
 			if (EnemySniper)
 			{
 				DistanceToSniper = FMath::Abs(X - static_cast<int32>(EnemySniper->Position.X)) + FMath::Abs(Y - static_cast<int32>(EnemySniper->Position.Y));
+				TempUnitDistanceToSniper = FMath::Abs(X - static_cast<int32>(Sniper->Position.X)) + FMath::Abs(Y - static_cast<int32>(Sniper->Position.Y));
 			}
 
 			if (EnemyBrawler)
 			{
 				DistanceToBrawler = FMath::Abs(X - static_cast<int32>(EnemyBrawler->Position.X)) + FMath::Abs(Y - static_cast<int32>(EnemyBrawler->Position.Y));
+				TempUnitDistanceToBrawler = FMath::Abs(X - static_cast<int32>(Sniper->Position.X)) + FMath::Abs(Y - static_cast<int32>(Sniper->Position.Y));
 			}
 
 			if (DistanceToSniper < SniperDistance)
 			{
 				SniperDistance = DistanceToSniper;
+				UnitDistanceToSniperTile = TempUnitDistanceToSniper;
 				ClosestToSniper = Tile;
+			}
+			else if (DistanceToSniper == SniperDistance)
+			{
+				if (TempUnitDistanceToSniper < UnitDistanceToSniperTile)
+				{
+					UnitDistanceToSniperTile = TempUnitDistanceToSniper;
+					ClosestToSniper = Tile;
+				}
 			}
 
 			if (DistanceToBrawler < BrawlerDistance)
 			{
 				BrawlerDistance = DistanceToBrawler;
+				UnitDistanceToBrawlerTile = TempUnitDistanceToBrawler;
 				ClosestToBrawler = Tile;
+			}
+			else if (DistanceToBrawler == BrawlerDistance)
+			{
+				if (TempUnitDistanceToBrawler < UnitDistanceToBrawlerTile)
+				{
+					UnitDistanceToBrawlerTile = TempUnitDistanceToBrawler;
+					ClosestToBrawler = Tile;
+				}
 			}
 		}
 	}
 	
-	if (ClosestToSniper && (SniperDistance < BrawlerDistance || RandomNumber == 0) && (SniperDistance > 0))
+	if (ClosestToSniper && ((SniperDistance < BrawlerDistance) || (SniperDistance == BrawlerDistance && RandomNumber == 0)) && (SniperDistance > 0))
 	{
 		XYPosition = GameField->GetXYPositionByRelativeLocation(ClosestToSniper->GetActorLocation());
 	}
-	else if (ClosestToBrawler && (SniperDistance > BrawlerDistance || RandomNumber == 1) && (BrawlerDistance > 0))
+	else if (ClosestToBrawler && (SniperDistance > BrawlerDistance || (SniperDistance == BrawlerDistance && RandomNumber == 1)) && (BrawlerDistance > 0))
 	{
 		XYPosition = GameField->GetXYPositionByRelativeLocation(ClosestToBrawler->GetActorLocation());
 	}
@@ -375,6 +417,154 @@ void ARandomPlayer::MoveSniper()
 
 	GameField->UnHighLight();
 	SniperMoved = true;
+}
+
+void ARandomPlayer::HighlightAndAttackBrawler()
+{
+	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+	AUnit* Brawler = nullptr;
+	for (AUnit* Unit : MyUnits)
+	{
+		if (Unit->PawnType == EPawnType::BRAWLER)
+		{
+			Brawler = Unit;
+			break;
+		}
+	}
+
+	if (!Brawler)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Brawler not found"));
+		return;
+	}
+
+	TArray<bool> Visited;
+	Visited.Init(false, GameField->Size * GameField->Size);
+	BFSAttackRange(static_cast<int32>(Brawler->Position.X), static_cast<int32>(Brawler->Position.Y), GameField->Size, Brawler->AttackRange, Visited, GameField);
+
+	GetWorldTimerManager().SetTimer(BrawlerAttackTimerHandler, this, &ARandomPlayer::AttackBrawler, 1.f, false);
+}
+
+void ARandomPlayer::HighlightAndAttackSniper()
+{
+	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+	AUnit* Sniper = nullptr;
+	for (AUnit* Unit : MyUnits)
+	{
+		if (Unit->PawnType == EPawnType::SNIPER)
+		{
+			Sniper = Unit;
+			break;
+		}
+	}
+
+	if (!Sniper)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Sniper not found"));
+		return;
+	}
+
+	TArray<bool> Visited;
+	Visited.Init(false, GameField->Size * GameField->Size);
+	BFSAttackRange(static_cast<int32>(Sniper->Position.X), static_cast<int32>(Sniper->Position.Y), GameField->Size, Sniper->AttackRange, Visited, GameField);
+
+	GetWorldTimerManager().SetTimer(SniperAttackTimerHandler, this, &ARandomPlayer::AttackSniper, 1.f, false);
+}
+
+void ARandomPlayer::AttackBrawler()
+{
+	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+	AUnit* Brawler = nullptr;
+	for (AUnit* Unit : MyUnits)
+	{
+		if (Unit->PawnType == EPawnType::BRAWLER)
+		{
+			Brawler = Unit;
+			break;
+		}
+	}
+
+	if (!Brawler)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Brawler not found"));
+		return;
+	}
+
+	TArray<AUnit*> EnemyAtRange;
+	AHumanPlayer* HumanPlayer = Cast<AHumanPlayer>(Cast<AGameModality>(GetWorld()->GetAuthGameMode())->Players[0]);
+	for (ATile* Tile : GameField->TileArray)
+	{
+		if (Tile->bIsRed)
+		{
+			for (AUnit* Unit : HumanPlayer->MyUnits)
+			{
+				if (Unit->Position == GameField->GetXYPositionByRelativeLocation(Tile->GetActorLocation()))
+				{
+					EnemyAtRange.Add(Unit);
+				}
+			}
+		}
+	}
+
+	if (EnemyAtRange.Num() == 1)
+	{
+		Brawler->Attack(EnemyAtRange[0]);
+	}
+	else if (EnemyAtRange.Num() == 2)
+	{
+		int32 RandomNumber = FMath::RandRange(0, 1);
+		Brawler->Attack(EnemyAtRange[RandomNumber]);
+	}
+
+	GameField->UnHighLight();
+}
+
+void ARandomPlayer::AttackSniper()
+{
+	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+	AUnit* Sniper = nullptr;
+	for (AUnit* Unit : MyUnits)
+	{
+		if (Unit->PawnType == EPawnType::SNIPER)
+		{
+			Sniper = Unit;
+			break;
+		}
+	}
+
+	if (!Sniper)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Sniper not found"));
+		return;
+	}
+
+	TArray<AUnit*> EnemyAtRange;
+	AHumanPlayer* HumanPlayer = Cast<AHumanPlayer>(Cast<AGameModality>(GetWorld()->GetAuthGameMode())->Players[0]);
+	for (ATile* Tile : GameField->TileArray)
+	{
+		if (Tile->bIsRed)
+		{
+			for (AUnit* Unit : HumanPlayer->MyUnits)
+			{
+				if (Unit->Position == GameField->GetXYPositionByRelativeLocation(Tile->GetActorLocation()))
+				{
+					EnemyAtRange.Add(Unit);
+				}
+			}
+		}
+	}
+
+	if (EnemyAtRange.Num() == 1)
+	{
+		Sniper->Attack(EnemyAtRange[0]);
+	}
+	else if (EnemyAtRange.Num() == 2)
+	{
+		int32 RandomNumber = FMath::RandRange(0, 1);
+		Sniper->Attack(EnemyAtRange[RandomNumber]);
+	}
+
+	GameField->UnHighLight();
 }
 
 
@@ -495,178 +685,104 @@ void ARandomPlayer::OnTurn()
 	else
 	{
 		int32 RandomNumber = FMath::RandRange(0, 1);
+
+		AUnit* Brawler = nullptr;
+		AUnit* Sniper = nullptr;
+		float waitTime = 1.f;
+
+		for (AUnit* Unit : MyUnits)
+		{
+			if (Unit->PawnType == EPawnType::BRAWLER)
+			{
+				Brawler = Unit;
+			}
+			else if (Unit->PawnType == EPawnType::SNIPER)
+			{
+				Sniper = Unit;
+			}
+		}
+
+		if (Brawler->CanAttack())
+		{
+			GetWorldTimerManager().SetTimer(BrawlerAttackTimerHandler, this, &ARandomPlayer::HighlightAndAttackBrawler, waitTime, false);
+			waitTime += 1.2;
+			BrawlerAttacked = true;
+		}
+
+		if (Sniper->CanAttack())
+		{
+			GetWorldTimerManager().SetTimer(SniperAttackTimerHandler, this, &ARandomPlayer::HighlightAndAttackSniper, waitTime, false);
+			waitTime += 1.2;
+			SniperAttacked = true;
+		}
+
 		if (RandomNumber == 0)
 		{
-			GetWorldTimerManager().SetTimer(BrawlerMoveTimerHandler, this, &ARandomPlayer::HighlightAndMoveBrawler, 1.f, false);
-			GetWorldTimerManager().SetTimer(SniperMoveTimerHandler, this, &ARandomPlayer::HighlightAndMoveSniper, 3.f, false);
+			if (Brawler && !BrawlerAttacked) 
+			{
+				GetWorldTimerManager().SetTimer(BrawlerMoveTimerHandler, this, &ARandomPlayer::HighlightAndMoveBrawler, waitTime, false);
+				waitTime += 2.5;
+			}
+			if (Sniper && !SniperAttacked)
+			{
+				GetWorldTimerManager().SetTimer(SniperMoveTimerHandler, this, &ARandomPlayer::HighlightAndMoveSniper, waitTime, false);
+				waitTime += 2.5;
+			}
 		}
 		else
 		{
-			GetWorldTimerManager().SetTimer(SniperMoveTimerHandler, this, &ARandomPlayer::HighlightAndMoveSniper, 1.f, false);
-			GetWorldTimerManager().SetTimer(BrawlerMoveTimerHandler, this, &ARandomPlayer::HighlightAndMoveBrawler, 3.f, false);
+			if (Sniper && !SniperAttacked)
+			{
+				GetWorldTimerManager().SetTimer(SniperMoveTimerHandler, this, &ARandomPlayer::HighlightAndMoveSniper, waitTime, false);
+				waitTime += 2.5;
+			}
+			if (Brawler && !BrawlerAttacked)
+			{
+				GetWorldTimerManager().SetTimer(BrawlerMoveTimerHandler, this, &ARandomPlayer::HighlightAndMoveBrawler, waitTime, false);
+				waitTime += 2.5;
+			}
+		}
+
+		RandomNumber = FMath::RandRange(0, 1);
+
+		if (RandomNumber == 0)
+		{
+			if (Brawler && !BrawlerAttacked && Brawler->CanAttack())
+			{
+				GetWorldTimerManager().SetTimer(BrawlerAttackTimerHandler, this, &ARandomPlayer::HighlightAndAttackBrawler, waitTime, false);
+				waitTime += 1.2;
+			}
+			if (Sniper && !SniperAttacked && Sniper->CanAttack())
+			{
+				GetWorldTimerManager().SetTimer(SniperAttackTimerHandler, this, &ARandomPlayer::HighlightAndAttackSniper, waitTime, false);
+				waitTime += 1.2;
+			}
+		}
+		else
+		{
+			if (Sniper && !SniperAttacked && Sniper->CanAttack())
+			{
+				GetWorldTimerManager().SetTimer(SniperAttackTimerHandler, this, &ARandomPlayer::HighlightAndAttackSniper, waitTime, false);
+				waitTime += 1.2;
+			}
+			if (Brawler && !BrawlerAttacked && Brawler->CanAttack())
+			{
+				GetWorldTimerManager().SetTimer(BrawlerAttackTimerHandler, this, &ARandomPlayer::HighlightAndAttackBrawler, waitTime, false);
+				waitTime += 1.2;
+			}
 		}
 		
 		
 		AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
-		GameModality->TurnNextPlayer();
-		/*GetWorld()->GetTimerManager().SetTimer(TimerHandle1, [&]()
-			{
-
-				AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
-				AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
-				for (AUnit* Unit : MyUnits)
-				{
-					AHumanPlayer* HumanPlayer = Cast<AHumanPlayer>(GameModality->Players[0]);
-					int32 SniperDistance = INT_MAX, BrawlerDistance = INT_MAX;
-					AUnit* Sniper = nullptr;
-					AUnit* Brawler = nullptr;
-					for (AUnit* Enemy : HumanPlayer->MyUnits)
-					{
-						if (Enemy && Enemy->PlayerNumber == 1)
-						{
-							if (Enemy->PawnType == EPawnType::SNIPER)
-							{
-								SniperDistance = static_cast<int32>(FMath::Abs(Unit->Position.X - Enemy->Position.X) + FMath::Abs(Unit->Position.Y - Enemy->Position.Y));
-								Sniper = Enemy;
-							}
-							else
-							{
-								BrawlerDistance = static_cast<int32>(FMath::Abs(Unit->Position.X - Enemy->Position.X) + FMath::Abs(Unit->Position.Y - Enemy->Position.Y));
-								Brawler = Enemy;
-							}
-						}
-					}
-
-					int32 RandomNumber = FMath::RandRange(0, 1);
-
-					if (Brawler && BrawlerDistance < SniperDistance || (BrawlerDistance == SniperDistance && RandomNumber == 0))
-					{
-						FVector2D XYPosition = Unit->Position;
-						TArray<bool> Visited;
-						TArray<ATile*> VisitableTiles;
-
-						Visited.Init(false, GameField->Size * GameField->Size);
-						BFSMovementRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, Unit->MovementRange, Visited, GameField);
-						Visited.Init(false, GameField->Size * GameField->Size);
-						BFSAttackRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, Unit->AttackRange, Visited, GameField);
-
-						for (ATile* Tile : GameField->TileArray) {
-							if (Tile->bIsGreen)
-							{
-								VisitableTiles.Add(Tile);
-							}
-						}
-
-						int32 ClosestToEnemy = 0;
-						int32 MinDistance = INT32_MAX;
-						for (int32 i = 0; i < VisitableTiles.Num() - 1; i++)  // Calculating the closest tile to the enemy
-						{
-							int32 X = GameField->GetXYPositionByRelativeLocation(VisitableTiles[i]->GetActorLocation()).X;
-							int32 Y = GameField->GetXYPositionByRelativeLocation(VisitableTiles[i]->GetActorLocation()).Y;
-							int32 Distance = static_cast<int32>(FMath::Abs(X - Brawler->Position.X) + FMath::Abs(Y - Brawler->Position.Y));
-
-							if (Distance < MinDistance)
-							{
-								ClosestToEnemy = i;
-								MinDistance = Distance;
-							}
-						}
-
-						FVector Destination = VisitableTiles[ClosestToEnemy]->GetActorLocation();
-						
-						GetWorldTimerManager().SetTimer(MoveTimerHandler, this, Move , 1.5f, false);
-						
-						if (Unit->PawnType == EPawnType::BRAWLER)
-						{
-							BrawlerMoved = true;
-						}
-						else if (Unit->PawnType == EPawnType::SNIPER)
-						{
-							SniperMoved = true;
-						}
-						if (Unit->CanAttack())
-						{
-							Visited.Init(false, GameField->Size* GameField->Size);
-							BFSAttackRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, Unit->AttackRange, Visited, GameField);
-
-							GetWorldTimerManager().SetTimer(TimerHandle2, [&]()
-								{
-									Unit->Attack(Brawler);
-									GameField->UnHighLight();
-								}, 3, false);
-
-						}
-					}
-					else if (Sniper && BrawlerDistance > SniperDistance || (BrawlerDistance == SniperDistance && RandomNumber == 1))
-					{
-						FVector2D XYPosition = Unit->Position;
-						TArray<bool> Visited;
-						TArray<ATile*> VisitableTiles;
-
-						Visited.Init(false, GameField->Size * GameField->Size);
-						BFSMovementRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, Unit->MovementRange, Visited, GameField);
-						Visited.Init(false, GameField->Size * GameField->Size);
-						BFSAttackRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, Unit->AttackRange, Visited, GameField);
-
-						for (ATile* Tile : GameField->TileArray) {
-							if (Tile->bIsGreen)
-							{
-								VisitableTiles.Add(Tile);
-							}
-						}
-
-						int32 ClosestToEnemy = 0;
-						for (int32 i = 0; i < VisitableTiles.Num() - 1; i++)  // Calculating the closest tile to the enemy
-						{
-							int32 X = GameField->GetXYPositionByRelativeLocation(VisitableTiles[i]->GetActorLocation()).X;
-							int32 Y = GameField->GetXYPositionByRelativeLocation(VisitableTiles[i]->GetActorLocation()).Y;
-							int32 Distance = static_cast<int32>(FMath::Abs(X - Sniper->Position.X) + FMath::Abs(Y - Sniper->Position.Y));
-
-							if (Distance < ClosestToEnemy)
-							{
-								ClosestToEnemy = i;
-							}
-						}
-
-						FVector Destination = VisitableTiles[ClosestToEnemy]->GetActorLocation();
-						GameField->TileArray[static_cast<int32>(Unit->Position.X) * GameField->Size + static_cast<int32>(Unit->Position.Y)]->SetTileStatus(-1, ETileStatus::EMPTY);
-						FVector2D Position = GameField->GetXYPositionByRelativeLocation(Destination);
-						Unit->FindPathAndMove(Destination, GameField);
-						GameField->TileArray[static_cast<int32>(Position.X) * GameField->Size + static_cast<int32>(Position.Y)]->SetTileStatus(2, ETileStatus::OCCUPIED);
-						GameField->UnHighLight();
-
-						if (Unit->PawnType == EPawnType::BRAWLER)
-						{
-							BrawlerMoved = true;
-						}
-						else if (Unit->PawnType == EPawnType::SNIPER)
-						{
-							SniperMoved = true;
-						}
-
-						if (Unit->CanAttack())
-						{
-							Visited.Init(false, GameField->Size* GameField->Size);
-							BFSAttackRange(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y), GameField->Size, Unit->AttackRange, Visited, GameField);
-
-							GetWorldTimerManager().SetTimer(TimerHandle2, [&]()
-								{
-									Unit->Attack(Sniper);
-									GameField->UnHighLight();
-								}, 3, false);
-
-						}
-					}
-					else
-					{
-						UE_LOG(LogTemp, Warning, TEXT("No valid enemy found"));
-					}
-
-				}
-
-				GameModality->TurnNextPlayer();
-
-			}, 1.5, false);*/
+		if (GameModality)
+		{
+			GetWorldTimerManager().SetTimer(NextTurnTimerHandle, GameModality, &AGameModality::TurnNextPlayer, waitTime, false);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("GameModality not found"));
+		}
+		
 	}
 }
 

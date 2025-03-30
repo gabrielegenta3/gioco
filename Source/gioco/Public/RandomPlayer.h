@@ -61,9 +61,15 @@ protected:
 
 	FTimerHandle SniperMoveTimerHandler;
 
+	FTimerHandle BrawlerAttackHighlightTimerHandler;
+
+	FTimerHandle SniperAttackHighlightTimerHandler;
+
 	FTimerHandle BrawlerAttackTimerHandler;
 
 	FTimerHandle SniperAttackTimerHandler;
+
+	FTimerHandle NextTurnTimerHandle;
 
 	
 	// function to check in which tile a Unit could go based on their max step
@@ -80,6 +86,13 @@ protected:
 
 	void MoveSniper();
 
+	void HighlightAndAttackBrawler();
+
+	void HighlightAndAttackSniper();
+
+	void AttackBrawler();
+
+	void AttackSniper();
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
