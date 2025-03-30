@@ -22,7 +22,6 @@ void AGameModality::BeginPlay()
 	UE_LOG(LogTemp, Warning, TEXT("AGameModality::BeginPlay chiamato!"));
 	Super::BeginPlay();
 	IsGameOver = false;
-	MoveCounter = 0;
 	AHumanPlayer* HumanPlayer = GetWorld()->GetFirstPlayerController()->GetPawn<AHumanPlayer>();
 	if (!IsValid(HumanPlayer))
 	{
@@ -58,8 +57,9 @@ void AGameModality::BeginPlay()
 	// AI player = 1
 	Players.Add(AI);
 
-	this->ChoosePlayerAndStartGame();
 }
+
+
 
 void AGameModality::ChoosePlayerAndStartGame()
 {
@@ -69,7 +69,6 @@ void AGameModality::ChoosePlayerAndStartGame()
 	{
 		Players[IndexI]->PlayerNumber = IndexI;
 	}
-	MoveCounter += 1;
 	Players[CurrentPlayer]->OnTurn();
 }
 
@@ -129,3 +128,45 @@ void AGameModality::TurnNextPlayer()
 	// Attiva il turno del giocatore corrente
 	Player->OnTurn();
 }
+
+void AGameModality::StartGame()
+{
+}
+
+bool AGameModality::CheckWin()
+{
+	AHumanPlayer* HumanPlayer = Cast<AHumanPlayer>(Players[0]);
+	ARandomPlayer* RandomPlayer = Cast<ARandomPlayer>(Players[1]);
+	Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
+
+	if (HumanPlayer && RandomPlayer)
+	{
+		if (HumanPlayer->MyUnits.Num() == 0 && RandomPlayer->MyUnits.Num() == 0)
+		{
+			HumanPlayer->IsMyTurn = false;
+			RandomPlayer->IsMyTurn = false;
+			IsGameOver = true;
+			PlayerC->HUD->ShowWinLoseText("YOU GOT A DRAW!");
+			return true;
+		}
+		else if (HumanPlayer->MyUnits.Num() == 0)
+		{
+			HumanPlayer->IsMyTurn = false;
+			RandomPlayer->IsMyTurn = false;
+			IsGameOver = true;
+			PlayerC->HUD->ShowWinLoseText("YOU LOSE!");
+			return true;
+		}
+		else if (RandomPlayer->MyUnits.Num() == 0)
+		{
+			HumanPlayer->IsMyTurn = false;
+			RandomPlayer->IsMyTurn = false;
+			IsGameOver = true;
+			PlayerC->HUD->ShowWinLoseText("YOU WIN!");
+			return true;
+		}
+	}
+	
+	return false;
+}
+

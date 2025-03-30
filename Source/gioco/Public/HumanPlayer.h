@@ -45,6 +45,12 @@ public:
 	UFUNCTION()
 	void OnPassButtonClicked();
 
+	UFUNCTION()
+	void OnHardButtonClicked();
+
+	UFUNCTION()
+	void OnEasyButtonClicked();
+
 	// method to check if the unit has any enemy at attack range
 	bool CanAttack();
 
@@ -93,8 +99,6 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	virtual void OnTurn() override;
-	virtual void OnWin() override;
-	virtual void OnLose() override;
 
 	// called on left mouse click
 	UFUNCTION()

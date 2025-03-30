@@ -24,6 +24,9 @@ public:
 	
 	TArray<AUnit*> MyUnits;
 
+	// method to set the difficulty of the AI
+	void SetDifficulty(bool bSmart) { bIsSmart = bSmart; }
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -101,6 +104,4 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	virtual void OnTurn() override;
-	virtual void OnWin() override;
-	virtual void OnLose() override;
 };

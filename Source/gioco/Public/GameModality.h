@@ -30,9 +30,6 @@ public:
 
 	int32 CurrentPlayer;
 
-	// number of moves
-	int32 MoveCounter;
-
 	// reference to the camera actor
 	ACameraActor* CameraActor;
 
@@ -68,5 +65,7 @@ public:
 	// called at the end of the game turn
 	void TurnNextPlayer();
 
+	void StartGame();
 
+	bool CheckWin();
 };

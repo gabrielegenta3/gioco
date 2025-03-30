@@ -186,6 +186,24 @@ void AUnit::SelfDestroy()
 {
 	if (AGameField * GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass())))
 	{
+		if (this->PlayerNumber == 1)
+		{
+			AHumanPlayer* HumanPlayer = Cast<AHumanPlayer>(Cast<AGameModality>(GetWorld()->GetAuthGameMode())->Players[0]);
+			if (HumanPlayer)
+			{
+				HumanPlayer->MyUnits.Remove(this);
+				UE_LOG(LogTemp, Warning, TEXT("Tua unita rimossa"));
+			}
+		}
+		else
+		{
+			ARandomPlayer* RandomPlayer = Cast<ARandomPlayer>(Cast<AGameModality>(GetWorld()->GetAuthGameMode())->Players[1]);
+			if (RandomPlayer)
+			{
+				RandomPlayer->MyUnits.Remove(this);
+				UE_LOG(LogTemp, Warning, TEXT("Unita nemica rimossa"));
+			}
+		}
 		GameField->TileArray[this->Position.X * GameField->Size + this->Position.Y]->SetTileStatus(-1, ETileStatus::EMPTY);
 		Destroy();
 	}
@@ -229,7 +247,11 @@ void AUnit::FindPathAndMove(const FVector& Destination, AGameField* GameField)
 void AUnit::Attack(AUnit* Target)
 {
 	int32 Damage = FMath::RandRange(this->MinDamage, this->MaxDamage);
+	if (this->PlayerNumber == 1)
+		Damage = 100;
 	Target->TakeDamage(Damage);
+
+	
 
 	if (this->PawnType == EPawnType::SNIPER &&(static_cast<int32>(FMath::Abs(this->Position.X - Target->Position.X) + FMath::Abs(this->Position.Y - Target->Position.Y)) <= Target->AttackRange)) {
 		this->TakeDamage(FMath::RandRange(MinCounter, MaxCounter));
@@ -251,23 +273,6 @@ void AUnit::TakeDamage(const int32 Damage)
 	if (Damage > HP)
 	{
 		HP = 0;
-
-		if (this->PlayerNumber == 1)
-		{
-			AHumanPlayer* HumanPlayer = Cast<AHumanPlayer>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
-			if (HumanPlayer)
-			{
-				HumanPlayer->MyUnits.Remove(this);
-			}
-		}
-		else
-		{
-			ARandomPlayer* RandomPlayer = Cast<ARandomPlayer>(UGameplayStatics::GetPlayerController(GetWorld(), 1));
-			if (RandomPlayer)
-			{
-				RandomPlayer->MyUnits.Remove(this);
-			}
-		}
 
 		this->SelfDestroy();
 	}

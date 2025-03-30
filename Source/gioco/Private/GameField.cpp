@@ -176,7 +176,6 @@ void AGameField::ResetField()
 
 	AGameModality* GameMode = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
 	GameMode->IsGameOver = false;
-	GameMode->MoveCounter = 0;
 	GameMode->ChoosePlayerAndStartGame();
 }
 

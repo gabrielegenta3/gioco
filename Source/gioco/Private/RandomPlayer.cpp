@@ -213,69 +213,86 @@ void ARandomPlayer::MoveBrawler()
 	TArray<ATile*> VisitableTiles;
 	ATile* ClosestToSniper = nullptr;
 	ATile* ClosestToBrawler = nullptr;
-	int32 SniperDistance = INT_MAX, BrawlerDistance = INT_MAX, UnitDistanceToSniperTile = INT_MAX, UnitDistanceToBrawlerTile;
+	int32 SniperDistance = INT_MAX, BrawlerDistance = INT_MAX, UnitDistanceToSniperTile = INT_MAX, UnitDistanceToBrawlerTile = INT_MAX;
 
-	for (ATile* Tile : GameField->TileArray)
+	if (bIsSmart) 
 	{
-		if (Tile->bIsGreen)
+		for (ATile* Tile : GameField->TileArray)
 		{
-			int32 X = GameField->GetXYPositionByRelativeLocation(Tile->GetActorLocation()).X;
-			int32 Y = GameField->GetXYPositionByRelativeLocation(Tile->GetActorLocation()).Y;
+			if (Tile->bIsGreen)
+			{
+				int32 X = GameField->GetXYPositionByRelativeLocation(Tile->GetActorLocation()).X;
+				int32 Y = GameField->GetXYPositionByRelativeLocation(Tile->GetActorLocation()).Y;
 
-			int32 DistanceToSniper = INT_MAX, DistanceToBrawler = INT_MAX, TempUnitDistanceToSniper = INT_MAX, TempUnitDistanceToBrawler = INT_MAX;
+				int32 DistanceToSniper = INT_MAX, DistanceToBrawler = INT_MAX, TempUnitDistanceToSniper = INT_MAX, TempUnitDistanceToBrawler = INT_MAX;
 
-			if (EnemySniper)
-			{
-				DistanceToSniper = FMath::Abs(X - static_cast<int32>(EnemySniper->Position.X)) + FMath::Abs(Y - static_cast<int32>(EnemySniper->Position.Y));
-				TempUnitDistanceToSniper = FMath::Abs(X - static_cast<int32>(Brawler->Position.X)) + FMath::Abs(Y - static_cast<int32>(Brawler->Position.Y));
-			}
-			
-			if (EnemyBrawler)
-			{
-				DistanceToBrawler = FMath::Abs(X - static_cast<int32>(EnemyBrawler->Position.X)) + FMath::Abs(Y - static_cast<int32>(EnemyBrawler->Position.Y));
-				TempUnitDistanceToBrawler = FMath::Abs(X - static_cast<int32>(Brawler->Position.X)) + FMath::Abs(Y - static_cast<int32>(Brawler->Position.Y));
-			}
-
-			if (DistanceToSniper < SniperDistance)
-			{
-				SniperDistance = DistanceToSniper;
-				UnitDistanceToSniperTile = TempUnitDistanceToSniper;
-				ClosestToSniper = Tile;
-			}
-			else if (DistanceToSniper == SniperDistance)
-			{
-				if (TempUnitDistanceToSniper < UnitDistanceToSniperTile)
+				if (EnemySniper)
 				{
+					DistanceToSniper = FMath::Abs(X - static_cast<int32>(EnemySniper->Position.X)) + FMath::Abs(Y - static_cast<int32>(EnemySniper->Position.Y));
+					TempUnitDistanceToSniper = FMath::Abs(X - static_cast<int32>(Brawler->Position.X)) + FMath::Abs(Y - static_cast<int32>(Brawler->Position.Y));
+				}
+
+				if (EnemyBrawler)
+				{
+					DistanceToBrawler = FMath::Abs(X - static_cast<int32>(EnemyBrawler->Position.X)) + FMath::Abs(Y - static_cast<int32>(EnemyBrawler->Position.Y));
+					TempUnitDistanceToBrawler = FMath::Abs(X - static_cast<int32>(Brawler->Position.X)) + FMath::Abs(Y - static_cast<int32>(Brawler->Position.Y));
+				}
+
+				if (DistanceToSniper < SniperDistance)
+				{
+					SniperDistance = DistanceToSniper;
 					UnitDistanceToSniperTile = TempUnitDistanceToSniper;
 					ClosestToSniper = Tile;
 				}
-			}
-
-			if (DistanceToBrawler < BrawlerDistance)
-			{
-				BrawlerDistance = DistanceToBrawler;
-				UnitDistanceToBrawlerTile = TempUnitDistanceToBrawler;
-				ClosestToBrawler = Tile;
-			}
-			else if (DistanceToBrawler == BrawlerDistance)
-			{
-				if (TempUnitDistanceToBrawler < UnitDistanceToBrawlerTile)
+				else if (DistanceToSniper == SniperDistance)
 				{
+					if (TempUnitDistanceToSniper < UnitDistanceToSniperTile)
+					{
+						UnitDistanceToSniperTile = TempUnitDistanceToSniper;
+						ClosestToSniper = Tile;
+					}
+				}
+
+				if (DistanceToBrawler < BrawlerDistance)
+				{
+					BrawlerDistance = DistanceToBrawler;
 					UnitDistanceToBrawlerTile = TempUnitDistanceToBrawler;
 					ClosestToBrawler = Tile;
 				}
+				else if (DistanceToBrawler == BrawlerDistance)
+				{
+					if (TempUnitDistanceToBrawler < UnitDistanceToBrawlerTile)
+					{
+						UnitDistanceToBrawlerTile = TempUnitDistanceToBrawler;
+						ClosestToBrawler = Tile;
+					}
+				}
 			}
 		}
-	}
 
-
-	if (ClosestToSniper && ((SniperDistance < BrawlerDistance) || (SniperDistance == BrawlerDistance && RandomNumber == 0)) && (SniperDistance > 0))
-	{
-		XYPosition = GameField->GetXYPositionByRelativeLocation(ClosestToSniper->GetActorLocation());
+		if (ClosestToSniper && ((SniperDistance < BrawlerDistance) || (SniperDistance == BrawlerDistance && RandomNumber == 0)) && (SniperDistance > 0))
+		{
+			XYPosition = GameField->GetXYPositionByRelativeLocation(ClosestToSniper->GetActorLocation());
+		}
+		else if (ClosestToBrawler && (SniperDistance > BrawlerDistance || (SniperDistance == BrawlerDistance && RandomNumber == 1)) && (BrawlerDistance > 0))
+		{
+			XYPosition = GameField->GetXYPositionByRelativeLocation(ClosestToBrawler->GetActorLocation());
+		}
 	}
-	else if (ClosestToBrawler && (SniperDistance > BrawlerDistance || (SniperDistance == BrawlerDistance && RandomNumber == 1)) && (BrawlerDistance > 0))
+	else
 	{
-		XYPosition = GameField->GetXYPositionByRelativeLocation(ClosestToBrawler->GetActorLocation());
+		for (ATile* Tile : GameField->TileArray)
+		{
+			if (Tile->bIsGreen)
+			{
+				VisitableTiles.Add(Tile);
+			}
+		}
+		if (VisitableTiles.Num() > 0)
+		{
+			int32 RandomIndex = FMath::RandRange(0, VisitableTiles.Num() - 1);
+			XYPosition = GameField->GetXYPositionByRelativeLocation(VisitableTiles[RandomIndex]->GetActorLocation());
+		}
 	}
 
 	if (!(XYPosition.X == -1 && XYPosition.Y == -1))
@@ -284,8 +301,6 @@ void ARandomPlayer::MoveBrawler()
 		Brawler->FindPathAndMove(GameField->GetRelativeLocationByXYPosition(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y)), GameField);
 		GameField->TileArray[static_cast<int32>(XYPosition.X) * GameField->Size + static_cast<int32>(XYPosition.Y)]->SetTileStatus(2, ETileStatus::OCCUPIED);
 	}
-
-
 
 	GameField->UnHighLight();
 	BrawlerMoved = true;
@@ -342,69 +357,88 @@ void ARandomPlayer::MoveSniper()
 	TArray<ATile*> VisitableTiles;
 	ATile* ClosestToSniper = nullptr;
 	ATile* ClosestToBrawler = nullptr;
-	int32 SniperDistance = INT_MAX, BrawlerDistance = INT_MAX, UnitDistanceToSniperTile = INT_MAX, UnitDistanceToBrawlerTile;
+	int32 SniperDistance = INT_MAX, BrawlerDistance = INT_MAX, UnitDistanceToSniperTile = INT_MAX, UnitDistanceToBrawlerTile = INT_MAX;
 
-	for (ATile* Tile : GameField->TileArray)
+	if (bIsSmart)
 	{
-		if (Tile->bIsGreen)
+		for (ATile* Tile : GameField->TileArray)
 		{
-			int32 X = GameField->GetXYPositionByRelativeLocation(Tile->GetActorLocation()).X;
-			int32 Y = GameField->GetXYPositionByRelativeLocation(Tile->GetActorLocation()).Y;
-
-			int32 DistanceToSniper = INT_MAX, DistanceToBrawler = INT_MAX, TempUnitDistanceToSniper = INT_MAX, TempUnitDistanceToBrawler = INT_MAX;
-
-			if (EnemySniper)
+			if (Tile->bIsGreen)
 			{
-				DistanceToSniper = FMath::Abs(X - static_cast<int32>(EnemySniper->Position.X)) + FMath::Abs(Y - static_cast<int32>(EnemySniper->Position.Y));
-				TempUnitDistanceToSniper = FMath::Abs(X - static_cast<int32>(Sniper->Position.X)) + FMath::Abs(Y - static_cast<int32>(Sniper->Position.Y));
-			}
+				int32 X = GameField->GetXYPositionByRelativeLocation(Tile->GetActorLocation()).X;
+				int32 Y = GameField->GetXYPositionByRelativeLocation(Tile->GetActorLocation()).Y;
 
-			if (EnemyBrawler)
-			{
-				DistanceToBrawler = FMath::Abs(X - static_cast<int32>(EnemyBrawler->Position.X)) + FMath::Abs(Y - static_cast<int32>(EnemyBrawler->Position.Y));
-				TempUnitDistanceToBrawler = FMath::Abs(X - static_cast<int32>(Sniper->Position.X)) + FMath::Abs(Y - static_cast<int32>(Sniper->Position.Y));
-			}
+				int32 DistanceToSniper = INT_MAX, DistanceToBrawler = INT_MAX, TempUnitDistanceToSniper = INT_MAX, TempUnitDistanceToBrawler = INT_MAX;
 
-			if (DistanceToSniper < SniperDistance)
-			{
-				SniperDistance = DistanceToSniper;
-				UnitDistanceToSniperTile = TempUnitDistanceToSniper;
-				ClosestToSniper = Tile;
-			}
-			else if (DistanceToSniper == SniperDistance)
-			{
-				if (TempUnitDistanceToSniper < UnitDistanceToSniperTile)
+				if (EnemySniper)
 				{
+					DistanceToSniper = FMath::Abs(X - static_cast<int32>(EnemySniper->Position.X)) + FMath::Abs(Y - static_cast<int32>(EnemySniper->Position.Y));
+					TempUnitDistanceToSniper = FMath::Abs(X - static_cast<int32>(Sniper->Position.X)) + FMath::Abs(Y - static_cast<int32>(Sniper->Position.Y));
+				}
+
+				if (EnemyBrawler)
+				{
+					DistanceToBrawler = FMath::Abs(X - static_cast<int32>(EnemyBrawler->Position.X)) + FMath::Abs(Y - static_cast<int32>(EnemyBrawler->Position.Y));
+					TempUnitDistanceToBrawler = FMath::Abs(X - static_cast<int32>(Sniper->Position.X)) + FMath::Abs(Y - static_cast<int32>(Sniper->Position.Y));
+				}
+
+				if (DistanceToSniper < SniperDistance)
+				{
+					SniperDistance = DistanceToSniper;
 					UnitDistanceToSniperTile = TempUnitDistanceToSniper;
 					ClosestToSniper = Tile;
 				}
-			}
-
-			if (DistanceToBrawler < BrawlerDistance)
-			{
-				BrawlerDistance = DistanceToBrawler;
-				UnitDistanceToBrawlerTile = TempUnitDistanceToBrawler;
-				ClosestToBrawler = Tile;
-			}
-			else if (DistanceToBrawler == BrawlerDistance)
-			{
-				if (TempUnitDistanceToBrawler < UnitDistanceToBrawlerTile)
+				else if (DistanceToSniper == SniperDistance)
 				{
+					if (TempUnitDistanceToSniper < UnitDistanceToSniperTile)
+					{
+						UnitDistanceToSniperTile = TempUnitDistanceToSniper;
+						ClosestToSniper = Tile;
+					}
+				}
+
+				if (DistanceToBrawler < BrawlerDistance)
+				{
+					BrawlerDistance = DistanceToBrawler;
 					UnitDistanceToBrawlerTile = TempUnitDistanceToBrawler;
 					ClosestToBrawler = Tile;
 				}
+				else if (DistanceToBrawler == BrawlerDistance)
+				{
+					if (TempUnitDistanceToBrawler < UnitDistanceToBrawlerTile)
+					{
+						UnitDistanceToBrawlerTile = TempUnitDistanceToBrawler;
+						ClosestToBrawler = Tile;
+					}
+				}
 			}
 		}
+
+		if (ClosestToSniper && ((SniperDistance < BrawlerDistance) || (SniperDistance == BrawlerDistance && RandomNumber == 0)) && (SniperDistance > 0))
+		{
+			XYPosition = GameField->GetXYPositionByRelativeLocation(ClosestToSniper->GetActorLocation());
+		}
+		else if (ClosestToBrawler && (SniperDistance > BrawlerDistance || (SniperDistance == BrawlerDistance && RandomNumber == 1)) && (BrawlerDistance > 0))
+		{
+			XYPosition = GameField->GetXYPositionByRelativeLocation(ClosestToBrawler->GetActorLocation());
+		}
 	}
-	
-	if (ClosestToSniper && ((SniperDistance < BrawlerDistance) || (SniperDistance == BrawlerDistance && RandomNumber == 0)) && (SniperDistance > 0))
+	else
 	{
-		XYPosition = GameField->GetXYPositionByRelativeLocation(ClosestToSniper->GetActorLocation());
+		for (ATile* Tile : GameField->TileArray)
+		{
+			if (Tile->bIsGreen)
+			{
+				VisitableTiles.Add(Tile);
+			}
+		}
+
+		int32 RandomIndex = FMath::RandRange(0, VisitableTiles.Num() - 1);
+
+		XYPosition = GameField->GetXYPositionByRelativeLocation(VisitableTiles[RandomIndex]->GetActorLocation());
+
 	}
-	else if (ClosestToBrawler && (SniperDistance > BrawlerDistance || (SniperDistance == BrawlerDistance && RandomNumber == 1)) && (BrawlerDistance > 0))
-	{
-		XYPosition = GameField->GetXYPositionByRelativeLocation(ClosestToBrawler->GetActorLocation());
-	}
+
 
 	if (!(XYPosition.X == -1 && XYPosition.Y == -1))
 	{
@@ -474,6 +508,7 @@ void ARandomPlayer::HighlightAndAttackSniper()
 void ARandomPlayer::AttackBrawler()
 {
 	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+	AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
 	AUnit* Brawler = nullptr;
 	for (AUnit* Unit : MyUnits)
 	{
@@ -517,11 +552,21 @@ void ARandomPlayer::AttackBrawler()
 	}
 
 	GameField->UnHighLight();
+
+	if (GameModality && GameModality->CheckWin())
+	{
+		return;
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Couldn't find GameMode"));
+	}
 }
 
 void ARandomPlayer::AttackSniper()
 {
 	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+	AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
 	AUnit* Sniper = nullptr;
 	for (AUnit* Unit : MyUnits)
 	{
@@ -562,6 +607,16 @@ void ARandomPlayer::AttackSniper()
 	{
 		int32 RandomNumber = FMath::RandRange(0, 1);
 		Sniper->Attack(EnemyAtRange[RandomNumber]);
+	}
+
+	if (GameModality)
+	{
+		if (GameModality->CheckWin())
+			return;
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Couldn't find GameMode"));
 	}
 
 	GameField->UnHighLight();
@@ -608,6 +663,8 @@ void ARandomPlayer::OnTurn()
 {
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("AI (Random) Turn"));
 	GameInstance->SetTurnMessage(TEXT("AI (Random) Turn"));
+	BrawlerAttacked = false;
+	SniperAttacked = false;
 	
 
 	if (!(SniperPlaced && BrawlerPlaced))
@@ -702,14 +759,14 @@ void ARandomPlayer::OnTurn()
 			}
 		}
 
-		if (Brawler->CanAttack())
+		if (Brawler && Brawler->CanAttack())
 		{
 			GetWorldTimerManager().SetTimer(BrawlerAttackTimerHandler, this, &ARandomPlayer::HighlightAndAttackBrawler, waitTime, false);
 			waitTime += 1.2;
 			BrawlerAttacked = true;
 		}
 
-		if (Sniper->CanAttack())
+		if (Sniper && Sniper->CanAttack())
 		{
 			GetWorldTimerManager().SetTimer(SniperAttackTimerHandler, this, &ARandomPlayer::HighlightAndAttackSniper, waitTime, false);
 			waitTime += 1.2;
@@ -721,12 +778,12 @@ void ARandomPlayer::OnTurn()
 			if (Brawler && !BrawlerAttacked) 
 			{
 				GetWorldTimerManager().SetTimer(BrawlerMoveTimerHandler, this, &ARandomPlayer::HighlightAndMoveBrawler, waitTime, false);
-				waitTime += 2.5;
+				waitTime += 3;
 			}
 			if (Sniper && !SniperAttacked)
 			{
 				GetWorldTimerManager().SetTimer(SniperMoveTimerHandler, this, &ARandomPlayer::HighlightAndMoveSniper, waitTime, false);
-				waitTime += 2.5;
+				waitTime += 3;
 			}
 		}
 		else
@@ -734,12 +791,12 @@ void ARandomPlayer::OnTurn()
 			if (Sniper && !SniperAttacked)
 			{
 				GetWorldTimerManager().SetTimer(SniperMoveTimerHandler, this, &ARandomPlayer::HighlightAndMoveSniper, waitTime, false);
-				waitTime += 2.5;
+				waitTime += 3;
 			}
 			if (Brawler && !BrawlerAttacked)
 			{
 				GetWorldTimerManager().SetTimer(BrawlerMoveTimerHandler, this, &ARandomPlayer::HighlightAndMoveBrawler, waitTime, false);
-				waitTime += 2.5;
+				waitTime += 3;
 			}
 		}
 
@@ -786,15 +843,3 @@ void ARandomPlayer::OnTurn()
 	}
 }
 
-void ARandomPlayer::OnWin()
-{
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("AI (Random) Wins!"));
-	GameInstance->SetTurnMessage(TEXT("AI Wins!"));
-	GameInstance->IncrementScoreAiPlayer();
-}
-
-void ARandomPlayer::OnLose()
-{
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("AI (Random) Loses!"));
-	GameInstance->SetTurnMessage(TEXT("AI Loses!"));
-}

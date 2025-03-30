@@ -4,6 +4,7 @@
 #include "HumanPlayer.h"
 #include "HUDWidget.h"
 #include "game_PlayerController.h"
+#include "RandomPlayer.h"
 
 // function to check in which tile a Unit could go based on their max step
 // function to visit all the cells of the map
@@ -162,6 +163,30 @@ void AHumanPlayer::OnPassButtonClicked()
 	}
 }
 
+void AHumanPlayer::OnHardButtonClicked()
+{
+	AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
+	ARandomPlayer* RandomPlayer = Cast<ARandomPlayer>(GameModality->Players[1]);
+	RandomPlayer->SetDifficulty(true);
+
+	Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetActorOfClass(GetWorld(), Agame_PlayerController::StaticClass()));
+	PlayerC->HUD->TurnIntoPlayHUD();
+
+	GameModality->ChoosePlayerAndStartGame();
+}
+
+void AHumanPlayer::OnEasyButtonClicked()
+{
+	AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
+	ARandomPlayer* RandomPlayer = Cast<ARandomPlayer>(GameModality->Players[1]);
+	RandomPlayer->SetDifficulty(false);
+
+	Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetActorOfClass(GetWorld(), Agame_PlayerController::StaticClass()));
+	PlayerC->HUD->TurnIntoPlayHUD();
+
+	GameModality->ChoosePlayerAndStartGame();
+}
+
 
 
 // Called when the game starts or when spawned
@@ -194,16 +219,6 @@ void AHumanPlayer::OnTurn()
 	SniperMoved = false;
 	BrawlerMoved = false;
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, TEXT("Your Turn"));	
-}
-
-void AHumanPlayer::OnWin()
-{
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, TEXT("You Win!"));
-}
-
-void AHumanPlayer::OnLose()
-{
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, TEXT("You Lose!"));
 }
 
 void AHumanPlayer::OnClick()
@@ -358,11 +373,16 @@ void AHumanPlayer::OnClick()
 					GameInstance->SelectedUnit = nullptr;
 					GameInstance->bIsUnitClicked = false;
 
+					AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
+					if (GameModality->CheckWin())
+					{
+						return;
+					}
+
 					if (SniperMoved && BrawlerMoved)
 					{
 						if ((SniperAttacked && BrawlerAttacked) || !this->CanAttack())
 						{
-							AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
 							GameModality->TurnNextPlayer();
 						}
 					}
@@ -413,7 +433,7 @@ void AHumanPlayer::OnClick()
 										GameModality->TurnNextPlayer();
 									}
 								}
-							}, 1, false);
+							}, 1.8, false);
 						
 					}
 				}
@@ -478,19 +498,27 @@ bool AHumanPlayer::CanAttack()
 	{
 		if (Unit)  // we need to see if at least one can attack
 		{
-			//condition = condition || (((Unit->PawnType == EPawnType::BRAWLER && !this->BrawlerAttacked) || (Unit->PawnType == EPawnType::SNIPER && !this->SniperAttacked)) && Unit->CanAttack());
-			TArray<bool> Visited;
-			Visited.Init(false, GameField->Size * GameField->Size);
-			BFSAttackRange(static_cast<int32>(Unit->Position.X), static_cast<int32>(Unit->Position.Y), GameField->Size, Unit->AttackRange, Visited, GameField);
-			for (ATile* Tile : GameField->TileArray)
+			if ((Unit->PawnType == EPawnType::SNIPER && this->SniperAttacked) || (Unit->PawnType == EPawnType::BRAWLER && this->BrawlerAttacked))
 			{
-				if (Tile->bIsRed)
+				continue;
+			}
+			else
+			{
+				TArray<bool> Visited;
+				Visited.Init(false, GameField->Size * GameField->Size);
+				BFSAttackRange(static_cast<int32>(Unit->Position.X), static_cast<int32>(Unit->Position.Y), GameField->Size, Unit->AttackRange, Visited, GameField);
+				for (ATile* Tile : GameField->TileArray)
 				{
-					condition = true;
-					GameField->UnHighLight();
-					break;
+					if (Tile->bIsRed)
+					{
+						condition = true;
+						GameField->UnHighLight();
+						break;
+					}
 				}
 			}
+
+			
 		}
 	}
 

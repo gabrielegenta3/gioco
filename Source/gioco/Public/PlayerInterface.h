@@ -34,6 +34,4 @@ public:
 	bool IsMyTurn = false;
 
 	virtual void OnTurn() {};
-	virtual void OnWin() {};
-	virtual void OnLose() {};
 };

@@ -22,8 +22,23 @@ bool UHUDWidget::Initialize()
     }
     WidgetTree->RootWidget = RootCanvas;
 
+    BackgroundImage = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("BackgroundImage"));
+    if (BackgroundImage)
+    {
+        // Imposta il colore con opacità (ad esempio, nero semitrasparente)
+        BackgroundImage->SetColorAndOpacity(FColor(0, 119, 179).ReinterpretAsLinear());
+
+        // Aggiungi l'immagine al canvas
+        UCanvasPanelSlot* BackgroundSlot = RootCanvas->AddChildToCanvas(BackgroundImage);
+        if (BackgroundSlot)
+        {
+            BackgroundSlot->SetAnchors(FAnchors(0, 0, 1, 1));
+            BackgroundSlot->SetOffsets(FMargin(0));
+        }
+    }
+
     // Creiamo il bottone Sniper
-    SniperButton = NewObject<UButton>(this, UButton::StaticClass());
+    SniperButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("SniperButton"));
     if (SniperButton)
     {
         // Creiamo un testo per il bottone
@@ -128,7 +143,105 @@ bool UHUDWidget::Initialize()
         }
     }
 
+    // ------------------------------------------------------
+    // Setup for the main menu
+    DifficultyText = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("DifficultyText"));
+    if (DifficultyText)
+    {
+        // Imposta il testo
+        DifficultyText->SetText(FText::FromString("Choose CPU difficulty to choose the beginner and start"));
+		DifficultyText->SetJustification(ETextJustify::Center);
+		DifficultyText->SetFont(FSlateFontInfo(FPaths::EngineContentDir() / TEXT("Slate/Fonts/Roboto-Regular.ttf"), 40));
+
+        // Aggiungi il text block al Canvas
+        UCanvasPanelSlot* TextSlot = RootCanvas->AddChildToCanvas(DifficultyText);
+        if (TextSlot)
+        {
+            TextSlot->SetAnchors(FAnchors(0.5f, 0.f, 0.5f, 0.f));
+            TextSlot->SetAlignment(FVector2D(0.5f, 0.f));
+            TextSlot->SetPosition(FVector2D(0.f, 150.f));
+            TextSlot->SetSize(FVector2D(400.f, 50.f));
+        }
+    }
+
+    UHorizontalBox* ButtonBox = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("ButtonBox"));
+    if (ButtonBox)
+    {
+        if (UCanvasPanelSlot* ButtonBoxSlot = RootCanvas->AddChildToCanvas(ButtonBox))
+        {
+            ButtonBoxSlot->SetAnchors(FAnchors(0.5f, 0.f, 0.5f, 0.f));
+            ButtonBoxSlot->SetAlignment(FVector2D(0.5f, 0.f));
+            ButtonBoxSlot->SetPosition(FVector2D(0.f, 250.f));
+            ButtonBoxSlot->SetSize(FVector2D(500.f, 100.f));
+        }
+
+        HardButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("HardButton"));
+        if (HardButton)
+        {
+            if (UHorizontalBoxSlot* HardButtonSlot = ButtonBox->AddChildToHorizontalBox(HardButton))
+            {
+                HardButtonSlot->SetPadding(FMargin(10.f));
+                HardButtonSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            }
+
+            UTextBlock* HardButtonText = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("HardButtonText"));
+            if (HardButtonText)
+            {
+                HardButtonText->SetText(FText::FromString("Hard"));
+                HardButton->AddChild(HardButtonText);
+            }
+            if (AHumanPlayer* HP = Cast<AHumanPlayer>(GetOwningPlayerPawn()))
+            {
+                HardButton->OnClicked.AddDynamic(HP, &AHumanPlayer::OnHardButtonClicked);
+            }
+        }
+
+        EasyButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("EasyButton"));
+        if (EasyButton)
+        {
+            if (UHorizontalBoxSlot* EasyButtonSlot = ButtonBox->AddChildToHorizontalBox(EasyButton))
+            {
+                EasyButtonSlot->SetPadding(FMargin(10.f));
+                EasyButtonSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            }
+
+            UTextBlock* EasyButtonText = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("EasyButtonText"));
+            if (EasyButtonText)
+            {
+                EasyButtonText->SetText(FText::FromString("Easy"));
+                EasyButton->AddChild(EasyButtonText);
+            }
+            if (AHumanPlayer* HP = Cast<AHumanPlayer>(GetOwningPlayerPawn()))
+            {
+                EasyButton->OnClicked.AddDynamic(HP, &AHumanPlayer::OnEasyButtonClicked);
+            }
+        }
+    }
+
+
+    // ------------------------------------------------------
+	// Win/Lose/Tie Text
+    WinLoseText = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("WinLoseText"));
+    if (WinLoseText)
+    {
+        WinLoseText->SetText(FText::FromString(""));
+        WinLoseText->SetVisibility(ESlateVisibility::Hidden); 
+        WinLoseText->SetJustification(ETextJustify::Center);
+        WinLoseText->SetFont(FSlateFontInfo(FPaths::EngineContentDir() / TEXT("Slate/Fonts/Roboto-Regular.ttf"), 180));
+
+        UCanvasPanelSlot* TextSlot = RootCanvas->AddChildToCanvas(WinLoseText);
+        if (TextSlot)
+        {
+            TextSlot->SetAnchors(FAnchors(0.5f, 0.4f, 0.5f, 0.4f)); 
+            TextSlot->SetAlignment(FVector2D(0.5f, 0.5f));
+            TextSlot->SetPosition(FVector2D(0.f, 0.f));
+            TextSlot->SetSize(FVector2D(800.f, 200.f)); 
+        }
+    }
+
     AddToViewport();
+
+	TurnIntoMainMenuHUD();
 
     return bSuccess;
 }
@@ -157,10 +270,142 @@ void UHUDWidget::HidePassButton()
     }
 }
 
+void UHUDWidget::HideResetButton()
+{
+	if (ResetButton)
+	{
+		ResetButton->SetVisibility(ESlateVisibility::Collapsed); // function to show the button
+	}
+}
+
+void UHUDWidget::HideHardButton()
+{
+	if (HardButton)
+	{
+		HardButton->SetVisibility(ESlateVisibility::Collapsed); // function to show the button
+	}
+}
+
+void UHUDWidget::HideEasyButton()
+{
+	if (EasyButton)
+	{
+		EasyButton->SetVisibility(ESlateVisibility::Collapsed); // function to show the button
+	}
+}
+
 void UHUDWidget::ShowPassButton()
 {
     if (PassButton)
     {
         PassButton->SetVisibility(ESlateVisibility::Visible); // function to show the button
     }
+}
+
+void UHUDWidget::TurnIntoPlayHUD()
+{
+	if (DifficultyText)
+	{
+		DifficultyText->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	if (HardButton)
+	{
+		HardButton->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	if (EasyButton)
+	{
+		EasyButton->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	if (BackgroundImage)
+	{
+		BackgroundImage->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
+	if (SniperButton)
+	{
+		SniperButton->SetVisibility(ESlateVisibility::Visible);
+	}
+	if (BrawlerButton)
+	{
+		BrawlerButton->SetVisibility(ESlateVisibility::Visible);
+	}
+	if (ResetButton)
+	{
+		ResetButton->SetVisibility(ESlateVisibility::Visible);
+	}
+}
+
+void UHUDWidget::TurnIntoMainMenuHUD()
+{
+	if (DifficultyText)
+	{
+		DifficultyText->SetVisibility(ESlateVisibility::Visible);
+	}
+	if (HardButton)
+	{
+		HardButton->SetVisibility(ESlateVisibility::Visible);
+	}
+	if (EasyButton)
+	{
+		EasyButton->SetVisibility(ESlateVisibility::Visible);
+	}
+    if (BackgroundImage)
+    {
+        BackgroundImage->SetVisibility(ESlateVisibility::Visible);
+    }
+	if (SniperButton)
+	{
+		SniperButton->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	if (BrawlerButton)
+	{
+		BrawlerButton->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	if (ResetButton)
+	{
+		ResetButton->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	if (PassButton)
+	{
+		PassButton->SetVisibility(ESlateVisibility::Collapsed);
+	}
+}
+
+void UHUDWidget::ShowWinLoseText(const FString& Message)
+{
+	if (WinLoseText)
+	{
+		WinLoseText->SetText(FText::FromString(Message));
+		WinLoseText->SetVisibility(ESlateVisibility::Visible);
+	}
+	if (BackgroundImage)
+	{
+		BackgroundImage->SetVisibility(ESlateVisibility::Visible);
+	}
+
+	if (SniperButton)
+	{
+		SniperButton->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	if (BrawlerButton)
+	{
+		BrawlerButton->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	if (HardButton)
+	{
+		HardButton->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	if (EasyButton)
+	{
+		EasyButton->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	if (DifficultyText)
+	{
+		DifficultyText->SetVisibility(ESlateVisibility::Collapsed);
+	}
+    if (PassButton)
+    {
+        PassButton->SetVisibility(ESlateVisibility::Collapsed);
+    }
+
 }
