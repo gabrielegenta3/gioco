@@ -142,6 +142,67 @@ bool UHUDWidget::Initialize()
             ResetButton->OnClicked.AddDynamic(HP, &AHumanPlayer::OnResetButtonClicked);
         }
     }
+    
+    ScrollBox = WidgetTree->ConstructWidget<UScrollBox>(UScrollBox::StaticClass(), TEXT("ScrollBox"));
+    if (ScrollBox)
+    {
+        UCanvasPanelSlot* ScrollSlot = RootCanvas->AddChildToCanvas(ScrollBox);
+        if (ScrollSlot)
+        {
+
+            // Posizionata in basso a destra
+            ScrollSlot->SetAnchors(FAnchors(0.9f, 0.9f, 0.9f, 0.9f));
+            ScrollSlot->SetAlignment(FVector2D(1.f, 1.f)); // Allineata all'angolo in basso a destra
+
+   
+            ScrollSlot->SetSize(FVector2D(300, 300));
+
+            // Mantiene la scrollbar visibile
+            ScrollBox->SetScrollBarVisibility(ESlateVisibility::Visible);
+        }
+    }
+
+    TurnText = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("TurnText"));
+
+    if (TurnText) 
+    {
+        UCanvasPanelSlot* TurnTextSlot = RootCanvas->AddChildToCanvas(TurnText);
+
+        if (TurnTextSlot)
+        {
+            float TextWidth = 300.f;
+            float TextHeight = 30.f;
+
+            TurnTextSlot->SetAnchors(FAnchors(0.02f, 0.9f, 0.1f, 0.9f));
+            TurnTextSlot->SetAlignment(FVector2D(1.f, 1.f));
+            TurnTextSlot->SetSize(FVector2D(TextWidth, TextHeight));
+        }
+    }
+
+
+    // Creazione dei TextBlock per gli HP
+    HumanUnitsText = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("HumanUnits"));
+    RandomUnitsText = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("RandomUnits"));
+
+    if (HumanUnitsText && RandomUnitsText)
+    {
+        UCanvasPanelSlot* HumanHPSlot = RootCanvas->AddChildToCanvas(HumanUnitsText);
+        UCanvasPanelSlot* RandomHPSlot = RootCanvas->AddChildToCanvas(RandomUnitsText);
+
+        if (HumanHPSlot && RandomHPSlot)
+        {
+            float TextWidth = 300.f;
+            float TextHeight = 30.f;
+
+            HumanHPSlot->SetAnchors(FAnchors(0.9f, 0.1f, 0.9f, 0.1f));
+            HumanHPSlot->SetAlignment(FVector2D(1.f, 1.f));
+            HumanHPSlot->SetSize(FVector2D(TextWidth, TextHeight));
+
+            RandomHPSlot->SetAnchors(FAnchors(0.9f, 0.25f, 0.9f, 0.25f));
+            RandomHPSlot->SetAlignment(FVector2D(1.f, 1.f));
+            RandomHPSlot->SetSize(FVector2D(TextWidth, TextHeight));
+        }
+    }
 
     // ------------------------------------------------------
     // Setup for the main menu
@@ -232,7 +293,7 @@ bool UHUDWidget::Initialize()
         UCanvasPanelSlot* TextSlot = RootCanvas->AddChildToCanvas(WinLoseText);
         if (TextSlot)
         {
-            TextSlot->SetAnchors(FAnchors(0.5f, 0.4f, 0.5f, 0.4f)); 
+            TextSlot->SetAnchors(FAnchors(0.5f, 0.5f, 0.5f, 0.5f)); 
             TextSlot->SetAlignment(FVector2D(0.5f, 0.5f));
             TextSlot->SetPosition(FVector2D(0.f, 0.f));
             TextSlot->SetSize(FVector2D(800.f, 200.f)); 
@@ -333,10 +394,28 @@ void UHUDWidget::TurnIntoPlayHUD()
 	{
 		ResetButton->SetVisibility(ESlateVisibility::Visible);
 	}
+    if (ScrollBox)
+    {
+        ScrollBox->SetVisibility(ESlateVisibility::Visible);
+    }
+    if (HumanUnitsText)
+    {
+        HumanUnitsText->SetVisibility(ESlateVisibility::Visible);
+    }
+    if (RandomUnitsText)
+    {
+        RandomUnitsText->SetVisibility(ESlateVisibility::Visible);
+    }
+    if (TurnText)
+    {
+        TurnText->SetVisibility(ESlateVisibility::Visible);
+    }
+
     if (WinLoseText)
     {
         WinLoseText->SetVisibility(ESlateVisibility::Collapsed);
     }
+    
 }
 
 void UHUDWidget::TurnIntoMainMenuHUD()
@@ -377,6 +456,22 @@ void UHUDWidget::TurnIntoMainMenuHUD()
     {
         WinLoseText->SetVisibility(ESlateVisibility::Collapsed);
     }
+    if (ScrollBox)
+    {
+        ScrollBox->SetVisibility(ESlateVisibility::Collapsed);
+    }
+    if (HumanUnitsText)
+    {
+        HumanUnitsText->SetVisibility(ESlateVisibility::Collapsed);
+    }
+    if (RandomUnitsText)
+    {
+        RandomUnitsText->SetVisibility(ESlateVisibility::Collapsed);
+    }
+    if (TurnText)
+    {
+        TurnText->SetVisibility(ESlateVisibility::Collapsed);
+    }
 }
 
 void UHUDWidget::ShowWinLoseText(const FString& Message)
@@ -415,5 +510,110 @@ void UHUDWidget::ShowWinLoseText(const FString& Message)
     {
         PassButton->SetVisibility(ESlateVisibility::Collapsed);
     }
+    if (ScrollBox)
+    {
+        ScrollBox->SetVisibility(ESlateVisibility::Collapsed);
+    }
+    if (HumanUnitsText)
+    {
+        HumanUnitsText->SetVisibility(ESlateVisibility::Collapsed);
+    }
+    if (RandomUnitsText)
+    {
+        RandomUnitsText->SetVisibility(ESlateVisibility::Collapsed);
+    }
+    if (TurnText)
+    {
+        TurnText->SetVisibility(ESlateVisibility::Collapsed);
+    }
+}
 
+void UHUDWidget::AddTextToScrollBox(const FString& Message)
+{
+    if (ScrollBox)
+    {
+        UTextBlock* NewTextBlock = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass());
+        if (NewTextBlock)
+        {
+            NewTextBlock->SetText(FText::FromString(Message));
+            // add new text block to scrollbox
+            ScrollBox->AddChild(NewTextBlock);
+            ScrollBox->ScrollToEnd();
+        }
+    }
+}
+
+void UHUDWidget::ClearScrollBox()
+{
+    if (ScrollBox)
+    {
+        ScrollBox->ClearChildren();
+    }
+}
+
+void UHUDWidget::UpdateUnitHP()
+{
+    AHumanPlayer* HumanPlayer = Cast<AHumanPlayer>(Cast<AGameModality>(GetWorld()->GetAuthGameMode())->Players[0]);
+    AUnit* Brawler = nullptr, * Sniper = nullptr;
+    for (AUnit* Unit : HumanPlayer->MyUnits)
+    {
+        if (Unit->PawnType == EPawnType::BRAWLER)
+            Brawler = Unit;
+        else
+            Sniper = Unit;
+    }
+    FString MainText = TEXT("Human Units:\n");
+    FString BrawlerHP = TEXT("");
+    FString SniperHP = TEXT("");
+
+    if (Brawler)
+        BrawlerHP = FString::Printf(TEXT("Brawler: %d\n"), Brawler->HP);
+    if (Sniper)
+        SniperHP = FString::Printf(TEXT("Sniper: %d"), Sniper->HP);
+
+    HumanUnitsText->SetText(FText::FromString(FString::Printf(TEXT("%s%s%s"), *MainText, *BrawlerHP, *SniperHP)));
+    
+    
+    ARandomPlayer* RandomPlayer = Cast<ARandomPlayer>(Cast<AGameModality>(GetWorld()->GetAuthGameMode())->Players[1]);
+    Brawler = nullptr, Sniper = nullptr;
+    for (AUnit* Unit : RandomPlayer->MyUnits)
+    {
+        if (Unit->PawnType == EPawnType::BRAWLER)
+            Brawler = Unit;
+        else
+            Sniper = Unit;
+    }
+    MainText = TEXT("Random Units:\n");
+    BrawlerHP = TEXT("");
+    SniperHP = TEXT("");
+
+    if (Brawler)
+        BrawlerHP = FString::Printf(TEXT("Brawler: %d\n"), Brawler->HP);
+    if (Sniper)
+        SniperHP = FString::Printf(TEXT("Sniper: %d"), Sniper->HP);
+
+    RandomUnitsText->SetText(FText::FromString(FString::Printf(TEXT("%s%s%s"), *MainText, *BrawlerHP, *SniperHP)));
+    
+}
+
+void UHUDWidget::ClearUnitHP()
+{
+    HumanUnitsText->SetText(FText::FromString(FString::Printf(TEXT(""))));
+    RandomUnitsText->SetText(FText::FromString(FString::Printf(TEXT(""))));
+}
+
+void UHUDWidget::SetTurnText(int32 PlayerNumber)
+{
+    if (PlayerNumber == 1)
+    {
+        FSlateColor Blue = FSlateColor(FLinearColor::Blue);
+        TurnText->SetText(FText::FromString(FString::Printf(TEXT("Your turn"))));
+        TurnText->SetColorAndOpacity(Blue);
+    }
+    else
+    {
+        FSlateColor Red = FSlateColor(FLinearColor::Red);
+        TurnText->SetText(FText::FromString(FString::Printf(TEXT("IA turn"))));
+        TurnText->SetColorAndOpacity(Red);
+    }
 }

@@ -9,11 +9,14 @@
 #include "Components/CanvasPanel.h"
 #include "Blueprint/WidgetTree.h"
 #include "HumanPlayer.h"
+#include "RandomPlayer.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/VerticalBox.h"
 #include "Components/HorizontalBox.h"
 #include "Components/Image.h"
+#include "Components/ScrollBox.h"
+#include "Components/ScrollBoxSlot.h"
 #include "HUDWidget.generated.h"
 
 /**
@@ -54,6 +57,15 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Text")
 	UTextBlock* WinLoseText;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Text")
+	UTextBlock* HumanUnitsText;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Text")
+	UTextBlock* RandomUnitsText;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ScrollBox")
+	UScrollBox* ScrollBox;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Image")
 	UImage* BackgroundImage;
 
@@ -89,4 +101,19 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void ShowWinLoseText(const FString& Message);
+
+	UFUNCTION(BlueprintCallable)
+	void AddTextToScrollBox(const FString& Message);
+
+	UFUNCTION(BlueprintCallable)
+	void ClearScrollBox();
+
+	UFUNCTION(BlueprintCallable)
+	void UpdateUnitHP();
+
+	UFUNCTION(BlueprintCallable)
+	void ClearUnitHP();
+
+	UFUNCTION(BlueprintCallable)
+	void SetTurnText(int32 PlayerNumber);
 };

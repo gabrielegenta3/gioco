@@ -47,6 +47,8 @@ protected:
 	UFUNCTION()
 	void MoveStep();
 
+	FString GetCellString(const FVector2D& CellCoord);
+
 public:	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	EPawnType PawnType;

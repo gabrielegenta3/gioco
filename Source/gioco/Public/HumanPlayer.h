@@ -91,6 +91,8 @@ protected:
 	// function to check in which tile a Unit could attack based on their range
 	void BFSAttackRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TArray<bool>& visited, AGameField* GF);
 
+	FString GetCellString(const FVector2D& CellCoord);
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

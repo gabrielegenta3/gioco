@@ -56,25 +56,28 @@ protected:
 
 	FTimerHandle TimerHandle2;
 
-	FTimerHandle BrawlerHighlightTimerHandler;
+	FTimerHandle BrawlerHighlightTimerHandle;
 
-	FTimerHandle SniperHighlightTimerHandler;
+	FTimerHandle SniperHighlightTimerHandle;
 
-	FTimerHandle BrawlerMoveTimerHandler;
+	FTimerHandle BrawlerMoveTimerHandle;
 
-	FTimerHandle SniperMoveTimerHandler;
+	FTimerHandle SniperMoveTimerHandle;
 
-	FTimerHandle BrawlerAttackHighlightTimerHandler;
+	FTimerHandle BrawlerAttackHighlightTimerHandle;
 
-	FTimerHandle SniperAttackHighlightTimerHandler;
+	FTimerHandle SniperAttackHighlightTimerHandle;
 
-	FTimerHandle BrawlerAttackTimerHandler;
+	FTimerHandle BrawlerAttackTimerHandle;
 
-	FTimerHandle SniperAttackTimerHandler;
+	FTimerHandle SniperAttackTimerHandle;
 
 	FTimerHandle NextTurnTimerHandle;
 
-	
+	FTimerHandle CanAttackTimerHandle;
+
+	float waitTime;
+
 	// function to check in which tile a Unit could go based on their max step
 	void BFSMovementRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TArray<bool>& visited, AGameField* GF);
 
@@ -103,6 +106,8 @@ protected:
 	int32 AStarSearch(const FVector2D& Start, const FVector2D& Goal, TArray<FVector2D>& Path);
 
 	FVector2D FindAStarDestination(AUnit* MovingUnit, AUnit* TargetUnit);
+
+	FString GetCellString(const FVector2D& CellCoord);
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

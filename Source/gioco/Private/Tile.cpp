@@ -89,7 +89,7 @@ ATile::ATile()
 
 	//SetRootComponent(StaticMeshComponent);
 
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(TEXT("/Script/Engine.StaticMesh'/Game/StarterContent/Shapes/Shape_Plane.Shape_Plane'"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(TEXT("/Script/Engine.StaticMesh'/Game/Shapes/Shape_Plane.Shape_Plane'"));
 	if (MeshAsset.Succeeded())
 	{
 		StaticMeshComponent->SetStaticMesh(MeshAsset.Object);

@@ -9,6 +9,7 @@
 #include "HumanPlayer.h"
 #include "RandomPlayer.h"
 #include "Kismet/GameplayStatics.h"
+#include "game_PlayerController.h"
 
 // Sets default values
 AUnit::AUnit()
@@ -16,7 +17,7 @@ AUnit::AUnit()
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 	PawnType = EPawnType::NONE;
-	StepTime = 0.5f;
+	StepTime = 0.2f;
 
 	// template function that creates a components
 	Scene = CreateDefaultSubobject<USceneComponent>(TEXT("Scene"));
@@ -26,7 +27,7 @@ AUnit::AUnit()
 	SetRootComponent(Scene);
 	StaticMeshComponent->SetupAttachment(Scene);
 
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(TEXT("/Script/Engine.StaticMesh'/Game/StarterContent/Shapes/Shape_Plane.Shape_Plane'"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(TEXT("/Script/Engine.StaticMesh'/Game/Shapes/Shape_Plane.Shape_Plane'"));
 	if (MeshAsset.Succeeded())
 	{
 		StaticMeshComponent->SetStaticMesh(MeshAsset.Object);
@@ -153,17 +154,89 @@ void AUnit::Init(EPawnType InPawnType, int32 InPlayerNumber, FVector2D Pos)
 
 bool AUnit::CanAttack()
 {
-	TArray<AActor*> FoundActors;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AUnit::StaticClass(), FoundActors);
-	for (AActor* Actor : FoundActors)
+	UWorld* World = GetWorld();
+	if (!World)
 	{
-		AUnit* Unit = Cast<AUnit>(Actor);
-		if (Unit && ((Unit->PlayerNumber == 2 && this->PlayerNumber == 1) || (Unit->PlayerNumber == 1 && this->PlayerNumber == 2)))
+		UE_LOG(LogTemp, Error, TEXT("GetWorld() is nullptr in CanAttack()"));
+		return false;
+	}
+
+	AGameModality* GameModality = Cast<AGameModality>(World->GetAuthGameMode());
+	if (!GameModality)
+	{
+		UE_LOG(LogTemp, Error, TEXT("GameModality is nullptr in CanAttack()"));
+		return false;
+	}
+
+	if (this->PlayerNumber == 1)
+	{
+		if (GameModality->Players.Num() <= 1)
 		{
-			if (static_cast<int32>(FMath::Abs(this->Position.X - Unit->Position.X) + FMath::Abs(this->Position.Y - Unit->Position.Y)) <= this->AttackRange) {
+			UE_LOG(LogTemp, Error, TEXT("Players array does not have enough elements (expected at least 2)!"));
+			return false;
+		}
+
+		ARandomPlayer* RandomPlayer = Cast<ARandomPlayer>(GameModality->Players[1]);
+		if (!RandomPlayer)
+		{
+			UE_LOG(LogTemp, Error, TEXT("RandomPlayer is nullptr in CanAttack()"));
+			return false;
+		}
+
+		for (AUnit* Unit : RandomPlayer->MyUnits)
+		{
+			if (!Unit) continue;
+
+			int32 Distance = FMath::Abs(this->Position.X - Unit->Position.X) + FMath::Abs(this->Position.Y - Unit->Position.Y);
+			if (Distance <= this->AttackRange)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Unit Can Attack"));
 				return true;
 			}
 		}
+	}
+	else
+	{
+		if (GameModality->Players.Num() <= 0)
+		{
+			UE_LOG(LogTemp, Error, TEXT("Players array is empty!"));
+			return false;
+		}
+
+		AHumanPlayer* HumanPlayer = Cast<AHumanPlayer>(GameModality->Players[0]);
+		if (!HumanPlayer)
+		{
+			UE_LOG(LogTemp, Error, TEXT("HumanPlayer is nullptr in CanAttack()"));
+			return false;
+		}
+
+		for (AUnit* Unit : HumanPlayer->MyUnits)
+		{
+			if (!Unit) continue;
+
+			int32 Distance = FMath::Abs(this->Position.X - Unit->Position.X) + FMath::Abs(this->Position.Y - Unit->Position.Y);
+			if (Distance <= this->AttackRange)
+			{
+				if (this->PawnType == EPawnType::BRAWLER)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Brawler Can Attack"));
+				}
+				else
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Sniper Can Attack"));
+				}
+				return true;
+			}
+		}
+	}
+
+	if (this->PawnType == EPawnType::BRAWLER)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Brawler CANT Attack"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Sniper CANT Attack"));
 	}
 	return false;
 }
@@ -247,30 +320,45 @@ void AUnit::FindPathAndMove(const FVector& Destination, AGameField* GameField)
 void AUnit::Attack(AUnit* Target)
 {
 	int32 Damage = FMath::RandRange(this->MinDamage, this->MaxDamage);
-	if (this->PlayerNumber == 1)
-		Damage = 100;
 	Target->TakeDamage(Damage);
 
-	
-
-	if (this->PawnType == EPawnType::SNIPER &&(static_cast<int32>(FMath::Abs(this->Position.X - Target->Position.X) + FMath::Abs(this->Position.Y - Target->Position.Y)) <= Target->AttackRange)) {
-		this->TakeDamage(FMath::RandRange(MinCounter, MaxCounter));
+	FString PlayerID = (PlayerNumber == 1) ? TEXT("HP") : TEXT("IA");
+	FString UnitID = (PawnType == EPawnType::SNIPER) ? TEXT("S") : TEXT("B");
+	FString Coordinates = GetCellString(Target->Position);
+	Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetActorOfClass(GetWorld(), Agame_PlayerController::StaticClass()));
+	if (PlayerC && PlayerC->HUD)
+	{
+		PlayerC->HUD->AddTextToScrollBox(FString::Printf(TEXT("%s: %s %s %d"), *PlayerID, *UnitID, *Coordinates, Damage));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Player controller or HUD is null"));
 	}
 
-	FString LocationString = FString::Printf(TEXT("%i damage dealt"), Damage);
-	FColor color;
 
-	if (this->PlayerNumber == 1)
-		color = FColor::Blue;
-	else
-		color = FColor::Red;
+	if (this->PawnType == EPawnType::SNIPER && (static_cast<int32>(FMath::Abs(this->Position.X - Target->Position.X) + FMath::Abs(this->Position.Y - Target->Position.Y)) <= Target->AttackRange)) {
+		int32 CounterDamage = FMath::RandRange(MinCounter, MaxCounter);
+		this->TakeDamage(CounterDamage);
 
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, color, LocationString);
+		PlayerID = (Target->PlayerNumber == 1) ? TEXT("HP") : TEXT("IA");
+		UnitID = (Target->PawnType == EPawnType::SNIPER) ? TEXT("S") : TEXT("B");
+		Coordinates = GetCellString(this->Position);
+
+		if (PlayerC && PlayerC->HUD)
+		{
+			PlayerC->HUD->AddTextToScrollBox(FString::Printf(TEXT("%s: %s %s %d"), *PlayerID, *UnitID, *Coordinates, CounterDamage));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Player controller or HUD is null"));
+		}
+	}
+
 }
 
 void AUnit::TakeDamage(const int32 Damage)
 {
-	if (Damage > HP)
+	if (Damage >= HP)
 	{
 		HP = 0;
 
@@ -279,6 +367,15 @@ void AUnit::TakeDamage(const int32 Damage)
 	else
 	{
 		HP -= Damage;
+		Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetActorOfClass(GetWorld(), Agame_PlayerController::StaticClass()));
+		if (PlayerC && PlayerC->HUD)
+		{
+			PlayerC->HUD->UpdateUnitHP();
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Player controller or HUD is null"));
+		}
 	}
 }
 
@@ -427,4 +524,17 @@ void AUnit::MoveStep()
 	Position = GameField->GetXYPositionByRelativeLocation(CurrentPath[CurrentPathIndex]);
 	Ugame_GameInstance* GameInstance = Cast<Ugame_GameInstance>(GetGameInstance());
 	GameInstance->bIsMoving = false;
+}
+
+FString AUnit::GetCellString(const FVector2D& CellCoord)
+{
+	// Convertiamo la colonna in lettera: 0->A, 1->B, ...
+	int32 Column = static_cast<int32>(CellCoord.X);
+	TCHAR ColumnLetter = 'A' + Column;
+
+	// Convertiamo la riga in numero (aggiungiamo 1 per usare 1-based indexing)
+	int32 Row = static_cast<int32>(CellCoord.Y) + 1;
+
+	// Combiniamo la lettera e il numero in una stringa
+	return FString::Printf(TEXT("%c%d"), ColumnLetter, Row);
 }

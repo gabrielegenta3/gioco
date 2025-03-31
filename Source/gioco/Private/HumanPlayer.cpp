@@ -106,6 +106,19 @@ void AHumanPlayer::BFSAttackRange(int32 startX, int32 startY, int32 size, int32 
 	}
 }
 
+FString AHumanPlayer::GetCellString(const FVector2D& CellCoord)
+{
+	// Convertiamo la colonna in lettera: 0->A, 1->B, ...
+	int32 Column = static_cast<int32>(CellCoord.X);
+	TCHAR ColumnLetter = 'A' + Column;
+
+	// Convertiamo la riga in numero (aggiungiamo 1 per usare 1-based indexing)
+	int32 Row = static_cast<int32>(CellCoord.Y) + 1;
+
+	// Combiniamo la lettera e il numero in una stringa
+	return FString::Printf(TEXT("%c%d"), ColumnLetter, Row);
+}
+
 
 
 // Sets default values
@@ -128,13 +141,14 @@ AHumanPlayer::AHumanPlayer()
 	BrawlerPlaced = false;
 	SniperMoved = false;
 	BrawlerMoved = false;
+	SniperAttacked = false;
+	BrawlerAttacked = false;
 }
 
 void AHumanPlayer::OnSniperButtonClicked()
 {
 	if (IsMyTurn)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, TEXT("Sniper Button Clicked"));
 		GameInstance->bSniperButtonClicked = true;
 		GameInstance->bBrawlerButtonClicked = false;
 	}
@@ -144,7 +158,6 @@ void AHumanPlayer::OnBrawlerButtonClicked()
 {
 	if (IsMyTurn)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, TEXT("Brawler Button Clicked"));
 		GameInstance->bBrawlerButtonClicked = true;
 		GameInstance->bSniperButtonClicked = false;
 	}
@@ -156,6 +169,8 @@ void AHumanPlayer::OnResetButtonClicked()
 	Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetActorOfClass(GetWorld(), Agame_PlayerController::StaticClass()));
 	
 	PlayerC->HUD->TurnIntoMainMenuHUD();
+	PlayerC->HUD->ClearScrollBox();
+	PlayerC->HUD->ClearUnitHP();
 
 
 	ARandomPlayer* RandomPlayer = Cast<ARandomPlayer>(Cast<AGameModality>(GetWorld()->GetAuthGameMode())->Players[1]);
@@ -177,6 +192,8 @@ void AHumanPlayer::OnResetButtonClicked()
 	RandomPlayer->ResetFlags();
 
 	GameField->ResetField();
+
+	PlayerC->HUD->UpdateUnitHP();
 }
 
 void AHumanPlayer::OnPassButtonClicked()
@@ -243,7 +260,9 @@ void AHumanPlayer::OnTurn()
 	BrawlerAttacked = false;
 	SniperMoved = false;
 	BrawlerMoved = false;
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, TEXT("Your Turn"));	
+	
+	Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetActorOfClass(GetWorld(), Agame_PlayerController::StaticClass()));
+	PlayerC->HUD->SetTurnText(1);
 }
 
 void AHumanPlayer::OnClick()
@@ -279,8 +298,6 @@ void AHumanPlayer::OnClick()
 
 				AGameField* FoundField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
 				FVector2D XYPosition = FoundField->GetXYPositionByRelativeLocation(SpawnPosition);
-				FString LocationString = FString::Printf(TEXT("You spawned a sniper at the position (%i, %i)"), static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y));
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, LocationString);
 
 				GameInstance->bSniperButtonClicked = false;
 				SniperPlaced = true;
@@ -289,7 +306,16 @@ void AHumanPlayer::OnClick()
 				{
 					PlayerC->HUD->ShowPassButton();
 				}
-				UE_LOG(LogTemp, Warning, TEXT("next turn 1"));
+
+				if (PlayerC && PlayerC->HUD)
+				{
+					PlayerC->HUD->UpdateUnitHP();
+				}
+				else
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Player controller or HUD is null"));
+				}
+
 				GameModality->TurnNextPlayer();
 			}
 		}
@@ -322,11 +348,18 @@ void AHumanPlayer::OnClick()
 
 				AGameField* FoundField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
 				FVector2D XYPosition = FoundField->GetXYPositionByRelativeLocation(SpawnPosition);
-				FString LocationString = FString::Printf(TEXT("You spawned a brawler at the position (%i, %i)"), static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y));
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, LocationString);
 
 				GameInstance->bBrawlerButtonClicked = false;
 				BrawlerPlaced = true;
+
+				if (PlayerC && PlayerC->HUD)
+				{
+					PlayerC->HUD->UpdateUnitHP();
+				}
+				else
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Player controller or HUD is null"));
+				}
 
 				if (BrawlerPlaced && SniperPlaced)
 				{
@@ -337,7 +370,7 @@ void AHumanPlayer::OnClick()
 			}
 		}
 	}
-	else if (Hit.bBlockingHit && IsMyTurn && GameInstance->bIsUnitClicked)  // if player already clicked on a unit you can click another unit to attack him if you can, click your unit to 
+	else if (Hit.bBlockingHit && IsMyTurn && GameInstance->bIsUnitClicked && SniperPlaced && BrawlerPlaced)  // if player already clicked on a unit you can click another unit to attack him if you can, click your unit to 
 	{																		// unhighlight tiles, click your other unit to highlight. You could also click another tile or unit but it does nothing obv
 		if (AUnit* CurrUnit = Cast<AUnit>(Hit.GetActor())) {
 			AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
@@ -430,6 +463,15 @@ void AHumanPlayer::OnClick()
 					{
 						GameField->TileArray[GameInstance->SelectedUnit->Position.X * GameField->Size + GameInstance->SelectedUnit->Position.Y]->SetTileStatus(-1, ETileStatus::EMPTY);
 						FVector2D Position = GameField->GetXYPositionByRelativeLocation(Destination);
+
+						FString UnitID = (GameInstance->SelectedUnit->PawnType == EPawnType::BRAWLER) ? TEXT("B") : TEXT("S");
+						FString PlayerID = TEXT("HP");
+						FString OriginCell = GetCellString(GameInstance->SelectedUnit->Position);
+						FString DestinationCell = GetCellString(Position);
+						
+						Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
+						PlayerC->HUD->AddTextToScrollBox(FString::Printf(TEXT("%s: %s %s -> %s"), *PlayerID, *UnitID, *OriginCell, *DestinationCell));
+
 						GameInstance->SelectedUnit->FindPathAndMove(Destination, GameField);
 						GameField->UnHighLight();
 						GameField->TileArray[Position.X * GameField->Size + Position.Y]->SetTileStatus(1, ETileStatus::OCCUPIED);
@@ -458,14 +500,14 @@ void AHumanPlayer::OnClick()
 										GameModality->TurnNextPlayer();
 									}
 								}
-							}, 1.8, false);
+							}, 2, false);
 						
 					}
 				}
 			}
 		}
 	}
-	else if (Hit.bBlockingHit && IsMyTurn && !GameInstance->bIsMoving)  // if nothing is clicked you can highlight
+	else if (Hit.bBlockingHit && IsMyTurn && !GameInstance->bIsMoving && SniperPlaced && BrawlerPlaced)  // if nothing is clicked you can highlight
 	{
 		if (AUnit* CurrUnit = Cast<AUnit>(Hit.GetActor())) 
 		{

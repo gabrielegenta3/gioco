@@ -3,6 +3,7 @@
 
 #include "RandomPlayer.h"
 #include "HumanPlayer.h"
+#include "game_PlayerController.h"
 
 
 void ARandomPlayer::BFSMovementRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TArray<bool>& visited, AGameField* GF)
@@ -129,7 +130,7 @@ void ARandomPlayer::HighlightAndMoveBrawler()
 	Visited.Init(false, GameField->Size * GameField->Size);
 	BFSAttackRange(static_cast<int32>(Brawler->Position.X), static_cast<int32>(Brawler->Position.Y), GameField->Size, Brawler->AttackRange, Visited, GameField);
 
-	GetWorldTimerManager().SetTimer(BrawlerMoveTimerHandler, this, &ARandomPlayer::MoveBrawler, 1.f, false);
+	GetWorldTimerManager().SetTimer(BrawlerMoveTimerHandle, this, &ARandomPlayer::MoveBrawler, 1.f, false);
 	
 }
 
@@ -158,7 +159,7 @@ void ARandomPlayer::HighlightAndMoveSniper()
 	Visited.Init(false, GameField->Size * GameField->Size);
 	BFSAttackRange(static_cast<int32>(Sniper->Position.X), static_cast<int32>(Sniper->Position.Y), GameField->Size, Sniper->AttackRange, Visited, GameField);
 
-	GetWorldTimerManager().SetTimer(SniperMoveTimerHandler, this, &ARandomPlayer::MoveSniper, 1.f, false);
+	GetWorldTimerManager().SetTimer(SniperMoveTimerHandle, this, &ARandomPlayer::MoveSniper, 1.f, false);
 }
 
 void ARandomPlayer::MoveBrawler()
@@ -196,7 +197,7 @@ void ARandomPlayer::MoveBrawler()
 		AUnit* EnemyBrawler = nullptr;
 		for (AUnit* Enemy : HumanPlayer->MyUnits)
 		{
-			if (Enemy && Enemy->PlayerNumber == 1)
+			if (Enemy)
 			{
 				if (Enemy->PawnType == EPawnType::SNIPER)
 				{
@@ -226,22 +227,33 @@ void ARandomPlayer::MoveBrawler()
 			if (EnemyBrawler)
 			{
 				DestinationToBrawler = FindAStarDestination(Brawler, EnemyBrawler);
-				TileToBrawler = CountStepsBFS(DestinationToBrawler, EnemyBrawler->Position, GameField);
+				TileToSniper = FMath::Abs(Brawler->Position.X - EnemyBrawler->Position.X) + FMath::Abs(Brawler->Position.Y - EnemyBrawler->Position.Y);
 			}
 
 			if (EnemySniper)
 			{
 				DestinationToSniper = FindAStarDestination(Brawler, EnemySniper);
-				TileToSniper = CountStepsBFS(DestinationToBrawler, EnemySniper->Position, GameField);
+				TileToSniper = FMath::Abs(Brawler->Position.X - EnemySniper->Position.X) + FMath::Abs(Brawler->Position.Y - EnemySniper->Position.Y);
 			}
 			 
-			if (TileToBrawler > TileToSniper || (TileToBrawler == TileToSniper && RandomNumber == 0))
+			if (TileToBrawler < TileToSniper)
 			{
 				XYPosition = DestinationToSniper;
 			}
-			else
+			else if (TileToBrawler > TileToSniper)
 			{
 				XYPosition = DestinationToBrawler;
+			}
+			else if (TileToBrawler == TileToSniper)
+			{
+				if (RandomNumber == 0)
+				{
+					XYPosition = DestinationToSniper;
+				}
+				else if (RandomNumber == 1)
+				{
+					XYPosition = DestinationToBrawler;
+				}
 			}
 		}
 		else
@@ -262,6 +274,14 @@ void ARandomPlayer::MoveBrawler()
 
 		if (!(XYPosition.X == -1 && XYPosition.Y == -1))
 		{
+			FString UnitID = (Brawler->PawnType == EPawnType::BRAWLER) ? TEXT("B") : TEXT("S");
+			FString PlayerID = TEXT("IA");
+			FString OriginCell = GetCellString(Brawler->Position);
+			FString DestinationCell = GetCellString(XYPosition);
+
+			Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
+			PlayerC->HUD->AddTextToScrollBox(FString::Printf(TEXT("%s: %s %s -> %s"), *PlayerID, *UnitID, *OriginCell, *DestinationCell));
+
 			GameField->TileArray[static_cast<int32>(Brawler->Position.X) * GameField->Size + static_cast<int32>(Brawler->Position.Y)]->SetTileStatus(-1, ETileStatus::EMPTY);
 			Brawler->FindPathAndMove(GameField->GetRelativeLocationByXYPosition(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y)), GameField);
 			UE_LOG(LogTemp, Warning, TEXT("Going to x:%i y:%i"), static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y));
@@ -307,7 +327,7 @@ void ARandomPlayer::MoveSniper()
 		AUnit* EnemyBrawler = nullptr;
 		for (AUnit* Enemy : HumanPlayer->MyUnits)
 		{
-			if (Enemy && Enemy->PlayerNumber == 1)
+			if (Enemy)
 			{
 				if (Enemy->PawnType == EPawnType::SNIPER)
 				{
@@ -336,23 +356,36 @@ void ARandomPlayer::MoveSniper()
 			if (EnemyBrawler)
 			{
 				DestinationToBrawler = FindAStarDestination(Sniper, EnemyBrawler);
-				TileToBrawler = CountStepsBFS(DestinationToBrawler, EnemyBrawler->Position, GameField);
+				TileToSniper = FMath::Abs(Sniper->Position.X - EnemyBrawler->Position.X) + FMath::Abs(Sniper->Position.Y - EnemyBrawler->Position.Y);
+				// TileToBrawler = CountStepsBFS(DestinationToBrawler, EnemyBrawler->Position, GameField);
 			}
 
 			if (EnemySniper)
 			{
 				DestinationToSniper = FindAStarDestination(Sniper, EnemySniper);
-				TileToSniper = CountStepsBFS(DestinationToBrawler, EnemySniper->Position, GameField);
+				TileToSniper = FMath::Abs(Sniper->Position.X - EnemySniper->Position.X) + FMath::Abs(Sniper->Position.Y - EnemySniper->Position.Y);
+				//TileToSniper = CountStepsBFS(DestinationToBrawler, EnemySniper->Position, GameField);
 			}
 
 
-			if (TileToBrawler > TileToSniper || (TileToBrawler == TileToSniper && RandomNumber == 0))
+			if (TileToBrawler > TileToSniper)
 			{
 				XYPosition = DestinationToSniper;
 			}
-			else
+			else if (TileToBrawler < TileToSniper)
 			{
 				XYPosition = DestinationToBrawler;
+			}
+			else if (TileToBrawler == TileToSniper)
+			{
+				if (RandomNumber == 0)
+				{
+					XYPosition = DestinationToSniper;
+				}
+				else if (RandomNumber == 1)
+				{
+					XYPosition = DestinationToBrawler;
+				}
 			}
 		}
 		else
@@ -374,6 +407,14 @@ void ARandomPlayer::MoveSniper()
 
 		if (!(XYPosition.X == -1 && XYPosition.Y == -1))
 		{
+			FString UnitID = (Sniper->PawnType == EPawnType::BRAWLER) ? TEXT("B") : TEXT("S");
+			FString PlayerID = TEXT("IA");
+			FString OriginCell = GetCellString(Sniper->Position);
+			FString DestinationCell = GetCellString(XYPosition);
+
+			Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
+			PlayerC->HUD->AddTextToScrollBox(FString::Printf(TEXT("%s: %s %s -> %s"), *PlayerID, *UnitID, *OriginCell, *DestinationCell));
+
 			GameField->TileArray[static_cast<int32>(Sniper->Position.X) * GameField->Size + static_cast<int32>(Sniper->Position.Y)]->SetTileStatus(-1, ETileStatus::EMPTY);
 			Sniper->FindPathAndMove(GameField->GetRelativeLocationByXYPosition(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y)), GameField);
 			GameField->TileArray[static_cast<int32>(XYPosition.X) * GameField->Size + static_cast<int32>(XYPosition.Y)]->SetTileStatus(2, ETileStatus::OCCUPIED);
@@ -391,6 +432,7 @@ void ARandomPlayer::HighlightAndAttackBrawler()
 {
 	if (IsMyTurn)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("Brawler attacking"));
 		AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
 		AUnit* Brawler = nullptr;
 		for (AUnit* Unit : MyUnits)
@@ -412,7 +454,7 @@ void ARandomPlayer::HighlightAndAttackBrawler()
 		Visited.Init(false, GameField->Size * GameField->Size);
 		BFSAttackRange(static_cast<int32>(Brawler->Position.X), static_cast<int32>(Brawler->Position.Y), GameField->Size, Brawler->AttackRange, Visited, GameField);
 
-		GetWorldTimerManager().SetTimer(BrawlerAttackTimerHandler, this, &ARandomPlayer::AttackBrawler, 1.f, false);
+		GetWorldTimerManager().SetTimer(BrawlerAttackTimerHandle, this, &ARandomPlayer::AttackBrawler, 1.f, false);
 	}
 }
 
@@ -420,6 +462,7 @@ void ARandomPlayer::HighlightAndAttackSniper()
 {
 	if (IsMyTurn)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("Sniper attacking"));
 		AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
 		AUnit* Sniper = nullptr;
 		for (AUnit* Unit : MyUnits)
@@ -441,7 +484,7 @@ void ARandomPlayer::HighlightAndAttackSniper()
 		Visited.Init(false, GameField->Size * GameField->Size);
 		BFSAttackRange(static_cast<int32>(Sniper->Position.X), static_cast<int32>(Sniper->Position.Y), GameField->Size, Sniper->AttackRange, Visited, GameField);
 
-		GetWorldTimerManager().SetTimer(SniperAttackTimerHandler, this, &ARandomPlayer::AttackSniper, 1.f, false);
+		GetWorldTimerManager().SetTimer(SniperAttackTimerHandle, this, &ARandomPlayer::AttackSniper, 1.f, false);
 	}
 }
 
@@ -610,8 +653,10 @@ void ARandomPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 
 void ARandomPlayer::OnTurn()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("AI (Random) Turn"));
-	GameInstance->SetTurnMessage(TEXT("AI (Random) Turn"));
+	Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetActorOfClass(GetWorld(), Agame_PlayerController::StaticClass()));
+	if (PlayerC && PlayerC->HUD)
+		PlayerC->HUD->SetTurnText(2);
+
 	BrawlerAttacked = false;
 	SniperAttacked = false;
 	IsMyTurn = true;
@@ -659,8 +704,6 @@ void ARandomPlayer::OnTurn()
 							UE_LOG(LogTemp, Warning, TEXT("Null Unit"));
 						}
 
-						FString LocationString = FString::Printf(TEXT("AI spawned a Brawler at the position (%i, %i)"), X, Y);
-						GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, LocationString);
 
 					}
 					else if (BrawlerPlaced || Rand == 1)
@@ -681,14 +724,23 @@ void ARandomPlayer::OnTurn()
 							UE_LOG(LogTemp, Warning, TEXT("Null Unit"));
 						}
 
-						FString LocationString = FString::Printf(TEXT("AI spawned a Sniper at the position (%i, %i)"), X, Y);
-						GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, LocationString);
 
 					}
+
+					Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetActorOfClass(GetWorld(), Agame_PlayerController::StaticClass()));
+					if (PlayerC && PlayerC->HUD)
+					{
+						PlayerC->HUD->UpdateUnitHP();
+					}
+					else
+					{
+						UE_LOG(LogTemp, Warning, TEXT("Player controller or HUD is null"));
+					}
+
 					GameModality->TurnNextPlayer();
 				}
 
-		}, 1.5, false);
+		}, 1, false);
 	
 	}
 	else
@@ -697,7 +749,7 @@ void ARandomPlayer::OnTurn()
 
 		AUnit* Brawler = nullptr;
 		AUnit* Sniper = nullptr;
-		float waitTime = 1.f;
+		waitTime = 1.f;
 
 		for (AUnit* Unit : MyUnits)
 		{
@@ -713,15 +765,15 @@ void ARandomPlayer::OnTurn()
 
 		if (Brawler && Brawler->CanAttack())
 		{
-			GetWorldTimerManager().SetTimer(BrawlerAttackTimerHandler, this, &ARandomPlayer::HighlightAndAttackBrawler, waitTime, false);
-			waitTime += 1.2;
+			GetWorld()->GetTimerManager().SetTimer(BrawlerAttackTimerHandle, this, &ARandomPlayer::HighlightAndAttackBrawler, waitTime, false);
+			waitTime += 2.5;
 			BrawlerAttacked = true;
 		}
 
 		if (Sniper && Sniper->CanAttack())
 		{
-			GetWorldTimerManager().SetTimer(SniperAttackTimerHandler, this, &ARandomPlayer::HighlightAndAttackSniper, waitTime, false);
-			waitTime += 1.2;
+			GetWorld()->GetTimerManager().SetTimer(SniperAttackTimerHandle, this, &ARandomPlayer::HighlightAndAttackSniper, waitTime, false);
+			waitTime += 2.5;
 			SniperAttacked = true;
 		}
 
@@ -729,69 +781,96 @@ void ARandomPlayer::OnTurn()
 		{
 			if (Brawler && !BrawlerAttacked) 
 			{
-				GetWorldTimerManager().SetTimer(BrawlerMoveTimerHandler, this, &ARandomPlayer::HighlightAndMoveBrawler, waitTime, false);
-				waitTime += 3;
+				GetWorld()->GetTimerManager().SetTimer(BrawlerMoveTimerHandle, this, &ARandomPlayer::HighlightAndMoveBrawler, waitTime, false);
+				waitTime += 2.5;
 			}
 			if (Sniper && !SniperAttacked)
 			{
-				GetWorldTimerManager().SetTimer(SniperMoveTimerHandler, this, &ARandomPlayer::HighlightAndMoveSniper, waitTime, false);
-				waitTime += 3;
+				GetWorld()->GetTimerManager().SetTimer(SniperMoveTimerHandle, this, &ARandomPlayer::HighlightAndMoveSniper, waitTime, false);
+				waitTime += 2.5;
 			}
 		}
 		else
 		{
 			if (Sniper && !SniperAttacked)
 			{
-				GetWorldTimerManager().SetTimer(SniperMoveTimerHandler, this, &ARandomPlayer::HighlightAndMoveSniper, waitTime, false);
-				waitTime += 3;
+				GetWorld()->GetTimerManager().SetTimer(SniperMoveTimerHandle, this, &ARandomPlayer::HighlightAndMoveSniper, waitTime, false);
+				waitTime += 2.5;
 			}
 			if (Brawler && !BrawlerAttacked)
 			{
-				GetWorldTimerManager().SetTimer(BrawlerMoveTimerHandler, this, &ARandomPlayer::HighlightAndMoveBrawler, waitTime, false);
-				waitTime += 3;
+				GetWorld()->GetTimerManager().SetTimer(BrawlerMoveTimerHandle, this, &ARandomPlayer::HighlightAndMoveBrawler, waitTime, false);
+				waitTime += 2.5;
 			}
 		}
+		GetWorld()->GetTimerManager().SetTimer(CanAttackTimerHandle, [&]()
+			{
+				int32 RandomNumber = FMath::RandRange(0, 1);
+				float wait = 0.1f;
+				AUnit* Brawler = nullptr;
+				AUnit* Sniper = nullptr;
+				for (AUnit* Unit : MyUnits)
+				{
+					if (Unit->PawnType == EPawnType::BRAWLER)
+					{
+						Brawler = Unit;
+					}
+					else if (Unit->PawnType == EPawnType::SNIPER)
+					{
+						Sniper = Unit;
+					}
+				}
 
-		RandomNumber = FMath::RandRange(0, 1);
+				if (RandomNumber == 0)
+				{
+					if (Brawler && !BrawlerAttacked && Brawler->CanAttack())
+					{
+						GetWorld()->GetTimerManager().SetTimer(BrawlerAttackTimerHandle, this, &ARandomPlayer::HighlightAndAttackBrawler, wait, false);
+						bool IsActive = GetWorld()->GetTimerManager().IsTimerActive(BrawlerAttackTimerHandle);
+						UE_LOG(LogTemp, Warning, TEXT("BrawlerAttackTimerHandle active after SetTimer: %s"), IsActive ? TEXT("YES") : TEXT("NO"));
+						wait += 2.5;
+					}
+					if (Sniper && !SniperAttacked && Sniper->CanAttack())
+					{
+						GetWorld()->GetTimerManager().SetTimer(SniperAttackTimerHandle, this, &ARandomPlayer::HighlightAndAttackSniper, wait, false);
+						bool IsActive = GetWorld()->GetTimerManager().IsTimerActive(SniperAttackTimerHandle);
+						UE_LOG(LogTemp, Warning, TEXT("SniperAttackTimerHandle active after SetTimer: %s"), IsActive ? TEXT("YES") : TEXT("NO"));
+						wait += 2.5;
+					}
+				}
+				else
+				{
+					if (Sniper && !SniperAttacked && Sniper->CanAttack())
+					{
+						GetWorld()->GetTimerManager().SetTimer(SniperAttackTimerHandle, this, &ARandomPlayer::HighlightAndAttackSniper, wait, false);
+						wait += 2.5;
+						bool IsActive = GetWorld()->GetTimerManager().IsTimerActive(SniperAttackTimerHandle);
+						UE_LOG(LogTemp, Warning, TEXT("SniperAttackTimerHandle active after SetTimer: %s"), IsActive ? TEXT("YES") : TEXT("NO"));
+					}
+					if (Brawler && !BrawlerAttacked && Brawler->CanAttack())
+					{
+						GetWorld()->GetTimerManager().SetTimer(BrawlerAttackTimerHandle, this, &ARandomPlayer::HighlightAndAttackBrawler, wait, false);
+						wait += 2.5;
+						bool IsActive = GetWorld()->GetTimerManager().IsTimerActive(BrawlerAttackTimerHandle);
+						UE_LOG(LogTemp, Warning, TEXT("BrawlerAttackTimerHandle active after SetTimer: %s"), IsActive ? TEXT("YES") : TEXT("NO"));
+					}
+				}
 
-		if (RandomNumber == 0)
-		{
-			if (Brawler && !BrawlerAttacked && Brawler->CanAttack())
-			{
-				GetWorldTimerManager().SetTimer(BrawlerAttackTimerHandler, this, &ARandomPlayer::HighlightAndAttackBrawler, waitTime, false);
-				waitTime += 1.2;
-			}
-			if (Sniper && !SniperAttacked && Sniper->CanAttack())
-			{
-				GetWorldTimerManager().SetTimer(SniperAttackTimerHandler, this, &ARandomPlayer::HighlightAndAttackSniper, waitTime, false);
-				waitTime += 1.2;
-			}
-		}
-		else
-		{
-			if (Sniper && !SniperAttacked && Sniper->CanAttack())
-			{
-				GetWorldTimerManager().SetTimer(SniperAttackTimerHandler, this, &ARandomPlayer::HighlightAndAttackSniper, waitTime, false);
-				waitTime += 1.2;
-			}
-			if (Brawler && !BrawlerAttacked && Brawler->CanAttack())
-			{
-				GetWorldTimerManager().SetTimer(BrawlerAttackTimerHandler, this, &ARandomPlayer::HighlightAndAttackBrawler, waitTime, false);
-				waitTime += 1.2;
-			}
-		}
-		
-		
+
+				UE_LOG(LogTemp, Warning, TEXT("Finita lambda function"));
+			}, waitTime, false);
+
+		waitTime += 2;
 		AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
 		if (GameModality)
 		{
-			GetWorldTimerManager().SetTimer(NextTurnTimerHandle, GameModality, &AGameModality::TurnNextPlayer, waitTime, false);
+			GetWorld()->GetTimerManager().SetTimer(NextTurnTimerHandle, GameModality, &AGameModality::TurnNextPlayer, waitTime, false);
+			bool IsActive = GetWorld()->GetTimerManager().IsTimerActive(NextTurnTimerHandle);
 		}
 		else
 		{
 			UE_LOG(LogTemp, Warning, TEXT("GameModality not found"));
 		}
-		
 	}
 }
 
@@ -814,7 +893,6 @@ int32 ARandomPlayer::CountStepsBFS(const FVector2D& Start, const FVector2D& Goal
 	int32 StartIndex = static_cast<int32>(Start.X) * GF->Size + static_cast<int32>(Start.Y);
 	int32 GoalIndex = static_cast<int32>(Goal.X) * GF->Size + static_cast<int32>(Goal.Y);
 
-	UE_LOG(LogTemp, Warning, TEXT("StartIndex: %i, GoalIndex: %i"), StartIndex, GoalIndex);
 
 	// Se partenza e arrivo coincidono, ritorna 0
 	if (StartIndex == GoalIndex)
@@ -865,12 +943,12 @@ int32 ARandomPlayer::CountStepsBFS(const FVector2D& Start, const FVector2D& Goal
 	}
 
 	// Per debug: stampa gli indici target
-	FString TargetsStr;
+	/*FString TargetsStr;
 	for (int32 idx : TargetIndices)
 	{
 		TargetsStr += TEXT("X:") + FString::FromInt(idx / GF->Size) + TEXT(" Y:") + FString::FromInt(idx % GF->Size) + TEXT(" ");
 	}
-	UE_LOG(LogTemp, Warning, TEXT("Target indices: %s"), *TargetsStr);
+	UE_LOG(LogTemp, Warning, TEXT("Target indices: %s"), *TargetsStr);*/
 
 	// Inizializza l'array dei passi
 	TArray<int32> Steps;
@@ -909,7 +987,6 @@ int32 ARandomPlayer::CountStepsBFS(const FVector2D& Start, const FVector2D& Goal
 					// Se il NextIndex è uno degli obiettivi, ritorna il numero di passi
 					if (TargetIndices.Contains(NextIndex))
 					{
-						UE_LOG(LogTemp, Warning, TEXT("Steps needed: %i"), Steps[NextIndex]);
 						return Steps[NextIndex];
 					}
 
@@ -1107,6 +1184,19 @@ FVector2D ARandomPlayer::FindAStarDestination(AUnit* MovingUnit, AUnit* TargetUn
 		// Altrimenti, restituisci la cella raggiungibile dopo MaxSteps lungo il percorso
 		return BestPath[MovingUnit->MovementRange];
 	}
+}
+
+FString ARandomPlayer::GetCellString(const FVector2D& CellCoord)
+{
+	// Convertiamo la colonna in lettera: 0->A, 1->B, ...
+	int32 Column = static_cast<int32>(CellCoord.X);
+	TCHAR ColumnLetter = 'A' + Column;
+
+	// Convertiamo la riga in numero (aggiungiamo 1 per usare 1-based indexing)
+	int32 Row = static_cast<int32>(CellCoord.Y) + 1;
+
+	// Combiniamo la lettera e il numero in una stringa
+	return FString::Printf(TEXT("%c%d"), ColumnLetter, Row);
 }
 
 

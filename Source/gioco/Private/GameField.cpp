@@ -218,6 +218,8 @@ void AGameField::GenerateField()
 			Obj->SetGridPosition(i, j);
 			TileArray.Add(Obj);
 			TileMap.Add(FVector2D(i, j), Obj);
+			FRotator RotationIncrement = FRotator(0.f, 90.f, 0.f);
+			Obj->AddActorLocalRotation(RotationIncrement);
 		}
 	}
 }
@@ -241,7 +243,6 @@ FVector2D AGameField::GetXYPositionByRelativeLocation(const FVector& Location) c
 {
 	const double XPos = Location.X / (TileSize * NextCellPositionMultiplier);
 	const double YPos = Location.Y / (TileSize * NextCellPositionMultiplier);
-	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, FString::Printf(TEXT("x=%f,y=%f"), XPos, YPos));
 	return FVector2D(XPos, YPos);
 }
 

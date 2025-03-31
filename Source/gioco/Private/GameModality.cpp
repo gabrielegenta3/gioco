@@ -43,7 +43,7 @@ void AGameModality::BeginPlay()
 	float Zposition = 2600.0f;
 	FVector CameraPos(CameraPosX, CameraPosX, Zposition);
 
-	FRotator CameraRotation = FRotator(-90.0f, -90.0f, 0.0f);
+	FRotator CameraRotation = FRotator(-90.0f, 0.0f, 0.0f);
 
 	HumanPlayer->SetActorLocationAndRotation(CameraPos, CameraRotation);
 
@@ -68,6 +68,11 @@ void AGameModality::ChoosePlayerAndStartGame()
 	{
 		Players[IndexI]->PlayerNumber = IndexI;
 	}
+	Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetActorOfClass(GetWorld(), Agame_PlayerController::StaticClass()));
+
+	if (PlayerC && PlayerC->HUD)
+		PlayerC->HUD->UpdateUnitHP();
+
 	Players[CurrentPlayer]->OnTurn();
 }
 
@@ -98,7 +103,8 @@ AUnit* AGameModality::SpawnCellUnit(int32 PlayerNumber, const FVector& SpawnPosi
 	const float TileScale = FoundField->TileSize / 120.f;
 	const float Zscaling = 0.2f;
 	Unit->SetActorScale3D(FVector(TileScale, TileScale, Zscaling));
-	
+	FRotator RotationIncrement = FRotator(0.f, 90.f, 0.f);
+	Unit->AddActorLocalRotation(RotationIncrement);
 	return Unit;
 }
 
