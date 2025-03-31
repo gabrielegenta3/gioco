@@ -929,7 +929,7 @@ void ARandomPlayer::OnTurn()
 				UE_LOG(LogTemp, Warning, TEXT("Finita lambda function"));
 			}, waitTime, false);
 
-		waitTime += 3;
+		waitTime += 2;
 		AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
 		if (GameModality)
 		{
