@@ -19,7 +19,6 @@ AGameModality::AGameModality()
 
 void AGameModality::BeginPlay()
 {
-	UE_LOG(LogTemp, Warning, TEXT("AGameModality::BeginPlay chiamato!"));
 	Super::BeginPlay();
 	IsGameOver = false;
 	AHumanPlayer* HumanPlayer = GetWorld()->GetFirstPlayerController()->GetPawn<AHumanPlayer>();
@@ -129,9 +128,6 @@ void AGameModality::TurnNextPlayer()
 	Player->OnTurn();
 }
 
-void AGameModality::StartGame()
-{
-}
 
 bool AGameModality::CheckWin()
 {

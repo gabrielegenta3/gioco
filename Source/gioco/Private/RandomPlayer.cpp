@@ -164,459 +164,408 @@ void ARandomPlayer::HighlightAndMoveSniper()
 void ARandomPlayer::MoveBrawler()
 {
 	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
-	AUnit* Brawler = nullptr;
-	for (AUnit* Unit : MyUnits)
+
+	if (IsMyTurn)
 	{
-		if (Unit->PawnType == EPawnType::BRAWLER)
+		AUnit* Brawler = nullptr;
+		for (AUnit* Unit : MyUnits)
 		{
-			Brawler = Unit;
-			break;
-		}
-	}
-
-	if (!Brawler)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Brawler not found"));
-		return;
-	}
-
-	AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
-
-	if (!GameModality)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("GameModality not found"));
-		return;
-	}
-
-	AHumanPlayer* HumanPlayer = Cast<AHumanPlayer>(GameModality->Players[0]);
-	AUnit* EnemySniper = nullptr;
-	AUnit* EnemyBrawler = nullptr;
-	for (AUnit* Enemy : HumanPlayer->MyUnits)
-	{
-		if (Enemy && Enemy->PlayerNumber == 1)
-		{
-			if (Enemy->PawnType == EPawnType::SNIPER)
+			if (Unit->PawnType == EPawnType::BRAWLER)
 			{
-				EnemySniper = Enemy;
+				Brawler = Unit;
+				break;
+			}
+		}
+
+		if (!Brawler)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Brawler not found"));
+			return;
+		}
+
+		AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
+
+		if (!GameModality)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("GameModality not found"));
+			return;
+		}
+
+		AHumanPlayer* HumanPlayer = Cast<AHumanPlayer>(GameModality->Players[0]);
+		AUnit* EnemySniper = nullptr;
+		AUnit* EnemyBrawler = nullptr;
+		for (AUnit* Enemy : HumanPlayer->MyUnits)
+		{
+			if (Enemy && Enemy->PlayerNumber == 1)
+			{
+				if (Enemy->PawnType == EPawnType::SNIPER)
+				{
+					EnemySniper = Enemy;
+				}
+				else
+				{
+					EnemyBrawler = Enemy;
+				}
+			}
+		}
+
+
+		int32 RandomNumber = FMath::RandRange(0, 1);
+
+		FVector2D XYPosition(-1, -1);
+		TArray<ATile*> VisitableTiles;
+
+		if (bIsSmart)
+		{
+			FVector2D DestinationToBrawler;
+			FVector2D DestinationToSniper;
+			int32 TileToBrawler = INT_MAX, TileToSniper = INT_MAX;
+
+			RandomNumber = FMath::RandRange(0, 1);
+
+			if (EnemyBrawler)
+			{
+				DestinationToBrawler = FindAStarDestination(Brawler, EnemyBrawler);
+				TileToBrawler = CountStepsBFS(DestinationToBrawler, EnemyBrawler->Position, GameField);
+			}
+
+			if (EnemySniper)
+			{
+				DestinationToSniper = FindAStarDestination(Brawler, EnemySniper);
+				TileToSniper = CountStepsBFS(DestinationToBrawler, EnemySniper->Position, GameField);
+			}
+			 
+			if (TileToBrawler > TileToSniper || (TileToBrawler == TileToSniper && RandomNumber == 0))
+			{
+				XYPosition = DestinationToSniper;
 			}
 			else
 			{
-				EnemyBrawler = Enemy;
+				XYPosition = DestinationToBrawler;
 			}
 		}
+		else
+		{
+			for (ATile* Tile : GameField->TileArray)
+			{
+				if (Tile->bIsGreen)
+				{
+					VisitableTiles.Add(Tile);
+				}
+			}
+			if (VisitableTiles.Num() > 0)
+			{
+				int32 RandomIndex = FMath::RandRange(0, VisitableTiles.Num() - 1);
+				XYPosition = GameField->GetXYPositionByRelativeLocation(VisitableTiles[RandomIndex]->GetActorLocation());
+			}
+		}
+
+		if (!(XYPosition.X == -1 && XYPosition.Y == -1))
+		{
+			GameField->TileArray[static_cast<int32>(Brawler->Position.X) * GameField->Size + static_cast<int32>(Brawler->Position.Y)]->SetTileStatus(-1, ETileStatus::EMPTY);
+			Brawler->FindPathAndMove(GameField->GetRelativeLocationByXYPosition(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y)), GameField);
+			UE_LOG(LogTemp, Warning, TEXT("Going to x:%i y:%i"), static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y));
+			GameField->TileArray[static_cast<int32>(XYPosition.X) * GameField->Size + static_cast<int32>(XYPosition.Y)]->SetTileStatus(2, ETileStatus::OCCUPIED);
+		}
+		BrawlerMoved = true;
 	}
-
-
-	int32 RandomNumber = FMath::RandRange(0, 1);
 	
-	FVector2D XYPosition(-1, -1);
-	TArray<ATile*> VisitableTiles;
-	ATile* ClosestToSniper = nullptr;
-	ATile* ClosestToBrawler = nullptr;
-	int32 SniperDistance = INT_MAX, BrawlerDistance = INT_MAX, UnitDistanceToSniperTile = INT_MAX, UnitDistanceToBrawlerTile = INT_MAX;
-
-	if (bIsSmart) 
-	{
-		for (ATile* Tile : GameField->TileArray)
-		{
-			if (Tile->bIsGreen)
-			{
-				int32 X = GameField->GetXYPositionByRelativeLocation(Tile->GetActorLocation()).X;
-				int32 Y = GameField->GetXYPositionByRelativeLocation(Tile->GetActorLocation()).Y;
-
-				int32 DistanceToSniper = INT_MAX, DistanceToBrawler = INT_MAX, TempUnitDistanceToSniper = INT_MAX, TempUnitDistanceToBrawler = INT_MAX;
-
-				if (EnemySniper)
-				{
-					DistanceToSniper = FMath::Abs(X - static_cast<int32>(EnemySniper->Position.X)) + FMath::Abs(Y - static_cast<int32>(EnemySniper->Position.Y));
-					TempUnitDistanceToSniper = FMath::Abs(X - static_cast<int32>(Brawler->Position.X)) + FMath::Abs(Y - static_cast<int32>(Brawler->Position.Y));
-				}
-
-				if (EnemyBrawler)
-				{
-					DistanceToBrawler = FMath::Abs(X - static_cast<int32>(EnemyBrawler->Position.X)) + FMath::Abs(Y - static_cast<int32>(EnemyBrawler->Position.Y));
-					TempUnitDistanceToBrawler = FMath::Abs(X - static_cast<int32>(Brawler->Position.X)) + FMath::Abs(Y - static_cast<int32>(Brawler->Position.Y));
-				}
-
-				if (DistanceToSniper < SniperDistance)
-				{
-					SniperDistance = DistanceToSniper;
-					UnitDistanceToSniperTile = TempUnitDistanceToSniper;
-					ClosestToSniper = Tile;
-				}
-				else if (DistanceToSniper == SniperDistance)
-				{
-					if (TempUnitDistanceToSniper < UnitDistanceToSniperTile)
-					{
-						UnitDistanceToSniperTile = TempUnitDistanceToSniper;
-						ClosestToSniper = Tile;
-					}
-				}
-
-				if (DistanceToBrawler < BrawlerDistance)
-				{
-					BrawlerDistance = DistanceToBrawler;
-					UnitDistanceToBrawlerTile = TempUnitDistanceToBrawler;
-					ClosestToBrawler = Tile;
-				}
-				else if (DistanceToBrawler == BrawlerDistance)
-				{
-					if (TempUnitDistanceToBrawler < UnitDistanceToBrawlerTile)
-					{
-						UnitDistanceToBrawlerTile = TempUnitDistanceToBrawler;
-						ClosestToBrawler = Tile;
-					}
-				}
-			}
-		}
-
-		if (ClosestToSniper && ((SniperDistance < BrawlerDistance) || (SniperDistance == BrawlerDistance && RandomNumber == 0)) && (SniperDistance > 0))
-		{
-			XYPosition = GameField->GetXYPositionByRelativeLocation(ClosestToSniper->GetActorLocation());
-		}
-		else if (ClosestToBrawler && (SniperDistance > BrawlerDistance || (SniperDistance == BrawlerDistance && RandomNumber == 1)) && (BrawlerDistance > 0))
-		{
-			XYPosition = GameField->GetXYPositionByRelativeLocation(ClosestToBrawler->GetActorLocation());
-		}
-	}
-	else
-	{
-		for (ATile* Tile : GameField->TileArray)
-		{
-			if (Tile->bIsGreen)
-			{
-				VisitableTiles.Add(Tile);
-			}
-		}
-		if (VisitableTiles.Num() > 0)
-		{
-			int32 RandomIndex = FMath::RandRange(0, VisitableTiles.Num() - 1);
-			XYPosition = GameField->GetXYPositionByRelativeLocation(VisitableTiles[RandomIndex]->GetActorLocation());
-		}
-	}
-
-	if (!(XYPosition.X == -1 && XYPosition.Y == -1))
-	{
-		GameField->TileArray[static_cast<int32>(Brawler->Position.X) * GameField->Size + static_cast<int32>(Brawler->Position.Y)]->SetTileStatus(-1, ETileStatus::EMPTY);
-		Brawler->FindPathAndMove(GameField->GetRelativeLocationByXYPosition(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y)), GameField);
-		GameField->TileArray[static_cast<int32>(XYPosition.X) * GameField->Size + static_cast<int32>(XYPosition.Y)]->SetTileStatus(2, ETileStatus::OCCUPIED);
-	}
-
 	GameField->UnHighLight();
-	BrawlerMoved = true;
 }
 
 void ARandomPlayer::MoveSniper()
 {
 	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
-	AUnit* Sniper = nullptr;
-	for (AUnit* Unit : MyUnits)
+	if (IsMyTurn)
 	{
-		if (Unit->PawnType == EPawnType::SNIPER)
+		AUnit* Sniper = nullptr;
+		for (AUnit* Unit : MyUnits)
 		{
-			Sniper = Unit;
-			break;
-		}
-	}
-
-	if (!Sniper)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Sniper not found"));
-		return;
-	}
-
-	AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
-
-	if (!GameModality)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("GameModality not found"));
-		return;
-	}
-
-	AHumanPlayer* HumanPlayer = Cast<AHumanPlayer>(GameModality->Players[0]);
-	AUnit* EnemySniper = nullptr;
-	AUnit* EnemyBrawler = nullptr;
-	for (AUnit* Enemy : HumanPlayer->MyUnits)
-	{
-		if (Enemy && Enemy->PlayerNumber == 1)
-		{
-			if (Enemy->PawnType == EPawnType::SNIPER)
+			if (Unit->PawnType == EPawnType::SNIPER)
 			{
-				EnemySniper = Enemy;
+				Sniper = Unit;
+				break;
+			}
+		}
+
+		if (!Sniper)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Sniper not found"));
+			return;
+		}
+
+		AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
+
+		if (!GameModality)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("GameModality not found"));
+			return;
+		}
+
+		AHumanPlayer* HumanPlayer = Cast<AHumanPlayer>(GameModality->Players[0]);
+		AUnit* EnemySniper = nullptr;
+		AUnit* EnemyBrawler = nullptr;
+		for (AUnit* Enemy : HumanPlayer->MyUnits)
+		{
+			if (Enemy && Enemy->PlayerNumber == 1)
+			{
+				if (Enemy->PawnType == EPawnType::SNIPER)
+				{
+					EnemySniper = Enemy;
+				}
+				else
+				{
+					EnemyBrawler = Enemy;
+				}
+			}
+		}
+
+		int32 RandomNumber = FMath::RandRange(0, 1);
+
+		FVector2D XYPosition(-1, -1);
+		TArray<ATile*> VisitableTiles;
+
+		if (bIsSmart)
+		{
+			FVector2D DestinationToBrawler;
+			FVector2D DestinationToSniper;
+			int32 TileToBrawler = INT_MAX, TileToSniper = INT_MAX;
+
+			RandomNumber = FMath::RandRange(0, 1);
+
+			if (EnemyBrawler)
+			{
+				DestinationToBrawler = FindAStarDestination(Sniper, EnemyBrawler);
+				TileToBrawler = CountStepsBFS(DestinationToBrawler, EnemyBrawler->Position, GameField);
+			}
+
+			if (EnemySniper)
+			{
+				DestinationToSniper = FindAStarDestination(Sniper, EnemySniper);
+				TileToSniper = CountStepsBFS(DestinationToBrawler, EnemySniper->Position, GameField);
+			}
+
+
+			if (TileToBrawler > TileToSniper || (TileToBrawler == TileToSniper && RandomNumber == 0))
+			{
+				XYPosition = DestinationToSniper;
 			}
 			else
 			{
-				EnemyBrawler = Enemy;
+				XYPosition = DestinationToBrawler;
 			}
 		}
-	}
-
-	int32 RandomNumber = FMath::RandRange(0, 1);
-
-	FVector2D XYPosition(-1, -1);
-	TArray<ATile*> VisitableTiles;
-	ATile* ClosestToSniper = nullptr;
-	ATile* ClosestToBrawler = nullptr;
-	int32 SniperDistance = INT_MAX, BrawlerDistance = INT_MAX, UnitDistanceToSniperTile = INT_MAX, UnitDistanceToBrawlerTile = INT_MAX;
-
-	if (bIsSmart)
-	{
-		for (ATile* Tile : GameField->TileArray)
+		else
 		{
-			if (Tile->bIsGreen)
+			for (ATile* Tile : GameField->TileArray)
 			{
-				int32 X = GameField->GetXYPositionByRelativeLocation(Tile->GetActorLocation()).X;
-				int32 Y = GameField->GetXYPositionByRelativeLocation(Tile->GetActorLocation()).Y;
-
-				int32 DistanceToSniper = INT_MAX, DistanceToBrawler = INT_MAX, TempUnitDistanceToSniper = INT_MAX, TempUnitDistanceToBrawler = INT_MAX;
-
-				if (EnemySniper)
+				if (Tile->bIsGreen)
 				{
-					DistanceToSniper = FMath::Abs(X - static_cast<int32>(EnemySniper->Position.X)) + FMath::Abs(Y - static_cast<int32>(EnemySniper->Position.Y));
-					TempUnitDistanceToSniper = FMath::Abs(X - static_cast<int32>(Sniper->Position.X)) + FMath::Abs(Y - static_cast<int32>(Sniper->Position.Y));
-				}
-
-				if (EnemyBrawler)
-				{
-					DistanceToBrawler = FMath::Abs(X - static_cast<int32>(EnemyBrawler->Position.X)) + FMath::Abs(Y - static_cast<int32>(EnemyBrawler->Position.Y));
-					TempUnitDistanceToBrawler = FMath::Abs(X - static_cast<int32>(Sniper->Position.X)) + FMath::Abs(Y - static_cast<int32>(Sniper->Position.Y));
-				}
-
-				if (DistanceToSniper < SniperDistance)
-				{
-					SniperDistance = DistanceToSniper;
-					UnitDistanceToSniperTile = TempUnitDistanceToSniper;
-					ClosestToSniper = Tile;
-				}
-				else if (DistanceToSniper == SniperDistance)
-				{
-					if (TempUnitDistanceToSniper < UnitDistanceToSniperTile)
-					{
-						UnitDistanceToSniperTile = TempUnitDistanceToSniper;
-						ClosestToSniper = Tile;
-					}
-				}
-
-				if (DistanceToBrawler < BrawlerDistance)
-				{
-					BrawlerDistance = DistanceToBrawler;
-					UnitDistanceToBrawlerTile = TempUnitDistanceToBrawler;
-					ClosestToBrawler = Tile;
-				}
-				else if (DistanceToBrawler == BrawlerDistance)
-				{
-					if (TempUnitDistanceToBrawler < UnitDistanceToBrawlerTile)
-					{
-						UnitDistanceToBrawlerTile = TempUnitDistanceToBrawler;
-						ClosestToBrawler = Tile;
-					}
+					VisitableTiles.Add(Tile);
 				}
 			}
+
+			int32 RandomIndex = FMath::RandRange(0, VisitableTiles.Num() - 1);
+
+			XYPosition = GameField->GetXYPositionByRelativeLocation(VisitableTiles[RandomIndex]->GetActorLocation());
+
 		}
 
-		if (ClosestToSniper && ((SniperDistance < BrawlerDistance) || (SniperDistance == BrawlerDistance && RandomNumber == 0)) && (SniperDistance > 0))
+
+		if (!(XYPosition.X == -1 && XYPosition.Y == -1))
 		{
-			XYPosition = GameField->GetXYPositionByRelativeLocation(ClosestToSniper->GetActorLocation());
-		}
-		else if (ClosestToBrawler && (SniperDistance > BrawlerDistance || (SniperDistance == BrawlerDistance && RandomNumber == 1)) && (BrawlerDistance > 0))
-		{
-			XYPosition = GameField->GetXYPositionByRelativeLocation(ClosestToBrawler->GetActorLocation());
-		}
-	}
-	else
-	{
-		for (ATile* Tile : GameField->TileArray)
-		{
-			if (Tile->bIsGreen)
-			{
-				VisitableTiles.Add(Tile);
-			}
+			GameField->TileArray[static_cast<int32>(Sniper->Position.X) * GameField->Size + static_cast<int32>(Sniper->Position.Y)]->SetTileStatus(-1, ETileStatus::EMPTY);
+			Sniper->FindPathAndMove(GameField->GetRelativeLocationByXYPosition(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y)), GameField);
+			GameField->TileArray[static_cast<int32>(XYPosition.X) * GameField->Size + static_cast<int32>(XYPosition.Y)]->SetTileStatus(2, ETileStatus::OCCUPIED);
 		}
 
-		int32 RandomIndex = FMath::RandRange(0, VisitableTiles.Num() - 1);
-
-		XYPosition = GameField->GetXYPositionByRelativeLocation(VisitableTiles[RandomIndex]->GetActorLocation());
-
+		SniperMoved = true;
 	}
-
-
-	if (!(XYPosition.X == -1 && XYPosition.Y == -1))
-	{
-		GameField->TileArray[static_cast<int32>(Sniper->Position.X) * GameField->Size + static_cast<int32>(Sniper->Position.Y)]->SetTileStatus(-1, ETileStatus::EMPTY);
-		Sniper->FindPathAndMove(GameField->GetRelativeLocationByXYPosition(static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y)), GameField);
-		GameField->TileArray[static_cast<int32>(XYPosition.X) * GameField->Size + static_cast<int32>(XYPosition.Y)]->SetTileStatus(2, ETileStatus::OCCUPIED);
-	}
-	
 	
 
 	GameField->UnHighLight();
-	SniperMoved = true;
+	
 }
 
 void ARandomPlayer::HighlightAndAttackBrawler()
 {
-	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
-	AUnit* Brawler = nullptr;
-	for (AUnit* Unit : MyUnits)
+	if (IsMyTurn)
 	{
-		if (Unit->PawnType == EPawnType::BRAWLER)
+		AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+		AUnit* Brawler = nullptr;
+		for (AUnit* Unit : MyUnits)
 		{
-			Brawler = Unit;
-			break;
+			if (Unit->PawnType == EPawnType::BRAWLER)
+			{
+				Brawler = Unit;
+				break;
+			}
 		}
+
+		if (!Brawler)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Brawler not found"));
+			return;
+		}
+
+		TArray<bool> Visited;
+		Visited.Init(false, GameField->Size * GameField->Size);
+		BFSAttackRange(static_cast<int32>(Brawler->Position.X), static_cast<int32>(Brawler->Position.Y), GameField->Size, Brawler->AttackRange, Visited, GameField);
+
+		GetWorldTimerManager().SetTimer(BrawlerAttackTimerHandler, this, &ARandomPlayer::AttackBrawler, 1.f, false);
 	}
-
-	if (!Brawler)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Brawler not found"));
-		return;
-	}
-
-	TArray<bool> Visited;
-	Visited.Init(false, GameField->Size * GameField->Size);
-	BFSAttackRange(static_cast<int32>(Brawler->Position.X), static_cast<int32>(Brawler->Position.Y), GameField->Size, Brawler->AttackRange, Visited, GameField);
-
-	GetWorldTimerManager().SetTimer(BrawlerAttackTimerHandler, this, &ARandomPlayer::AttackBrawler, 1.f, false);
 }
 
 void ARandomPlayer::HighlightAndAttackSniper()
 {
-	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
-	AUnit* Sniper = nullptr;
-	for (AUnit* Unit : MyUnits)
+	if (IsMyTurn)
 	{
-		if (Unit->PawnType == EPawnType::SNIPER)
+		AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+		AUnit* Sniper = nullptr;
+		for (AUnit* Unit : MyUnits)
 		{
-			Sniper = Unit;
-			break;
+			if (Unit->PawnType == EPawnType::SNIPER)
+			{
+				Sniper = Unit;
+				break;
+			}
 		}
+
+		if (!Sniper)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Sniper not found"));
+			return;
+		}
+
+		TArray<bool> Visited;
+		Visited.Init(false, GameField->Size * GameField->Size);
+		BFSAttackRange(static_cast<int32>(Sniper->Position.X), static_cast<int32>(Sniper->Position.Y), GameField->Size, Sniper->AttackRange, Visited, GameField);
+
+		GetWorldTimerManager().SetTimer(SniperAttackTimerHandler, this, &ARandomPlayer::AttackSniper, 1.f, false);
 	}
-
-	if (!Sniper)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Sniper not found"));
-		return;
-	}
-
-	TArray<bool> Visited;
-	Visited.Init(false, GameField->Size * GameField->Size);
-	BFSAttackRange(static_cast<int32>(Sniper->Position.X), static_cast<int32>(Sniper->Position.Y), GameField->Size, Sniper->AttackRange, Visited, GameField);
-
-	GetWorldTimerManager().SetTimer(SniperAttackTimerHandler, this, &ARandomPlayer::AttackSniper, 1.f, false);
 }
 
 void ARandomPlayer::AttackBrawler()
 {
 	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
-	AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
-	AUnit* Brawler = nullptr;
-	for (AUnit* Unit : MyUnits)
+	if (IsMyTurn)
 	{
-		if (Unit->PawnType == EPawnType::BRAWLER)
+		AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
+		AUnit* Brawler = nullptr;
+		for (AUnit* Unit : MyUnits)
 		{
-			Brawler = Unit;
-			break;
-		}
-	}
-
-	if (!Brawler)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Brawler not found"));
-		return;
-	}
-
-	TArray<AUnit*> EnemyAtRange;
-	AHumanPlayer* HumanPlayer = Cast<AHumanPlayer>(Cast<AGameModality>(GetWorld()->GetAuthGameMode())->Players[0]);
-	for (ATile* Tile : GameField->TileArray)
-	{
-		if (Tile->bIsRed)
-		{
-			for (AUnit* Unit : HumanPlayer->MyUnits)
+			if (Unit->PawnType == EPawnType::BRAWLER)
 			{
-				if (Unit->Position == GameField->GetXYPositionByRelativeLocation(Tile->GetActorLocation()))
+				Brawler = Unit;
+				break;
+			}
+		}
+
+		if (!Brawler)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Brawler not found"));
+			return;
+		}
+
+		TArray<AUnit*> EnemyAtRange;
+		AHumanPlayer* HumanPlayer = Cast<AHumanPlayer>(Cast<AGameModality>(GetWorld()->GetAuthGameMode())->Players[0]);
+		for (ATile* Tile : GameField->TileArray)
+		{
+			if (Tile->bIsRed)
+			{
+				for (AUnit* Unit : HumanPlayer->MyUnits)
 				{
-					EnemyAtRange.Add(Unit);
+					if (Unit->Position == GameField->GetXYPositionByRelativeLocation(Tile->GetActorLocation()))
+					{
+						EnemyAtRange.Add(Unit);
+					}
 				}
 			}
 		}
-	}
 
-	if (EnemyAtRange.Num() == 1)
-	{
-		Brawler->Attack(EnemyAtRange[0]);
-	}
-	else if (EnemyAtRange.Num() == 2)
-	{
-		int32 RandomNumber = FMath::RandRange(0, 1);
-		Brawler->Attack(EnemyAtRange[RandomNumber]);
+		if (EnemyAtRange.Num() == 1)
+		{
+			Brawler->Attack(EnemyAtRange[0]);
+		}
+		else if (EnemyAtRange.Num() == 2)
+		{
+			int32 RandomNumber = FMath::RandRange(0, 1);
+			Brawler->Attack(EnemyAtRange[RandomNumber]);
+		}
+
+
+		if (GameModality && GameModality->CheckWin())
+		{
+			return;
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Couldn't find GameMode"));
+		}
 	}
 
 	GameField->UnHighLight();
-
-	if (GameModality && GameModality->CheckWin())
-	{
-		return;
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Couldn't find GameMode"));
-	}
 }
 
 void ARandomPlayer::AttackSniper()
 {
+
 	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
-	AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
-	AUnit* Sniper = nullptr;
-	for (AUnit* Unit : MyUnits)
+	if (IsMyTurn)
 	{
-		if (Unit->PawnType == EPawnType::SNIPER)
+		AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
+		AUnit* Sniper = nullptr;
+		for (AUnit* Unit : MyUnits)
 		{
-			Sniper = Unit;
-			break;
-		}
-	}
-
-	if (!Sniper)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Sniper not found"));
-		return;
-	}
-
-	TArray<AUnit*> EnemyAtRange;
-	AHumanPlayer* HumanPlayer = Cast<AHumanPlayer>(Cast<AGameModality>(GetWorld()->GetAuthGameMode())->Players[0]);
-	for (ATile* Tile : GameField->TileArray)
-	{
-		if (Tile->bIsRed)
-		{
-			for (AUnit* Unit : HumanPlayer->MyUnits)
+			if (Unit->PawnType == EPawnType::SNIPER)
 			{
-				if (Unit->Position == GameField->GetXYPositionByRelativeLocation(Tile->GetActorLocation()))
+				Sniper = Unit;
+				break;
+			}
+		}
+
+		if (!Sniper)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Sniper not found"));
+			return;
+		}
+
+		TArray<AUnit*> EnemyAtRange;
+		AHumanPlayer* HumanPlayer = Cast<AHumanPlayer>(Cast<AGameModality>(GetWorld()->GetAuthGameMode())->Players[0]);
+		for (ATile* Tile : GameField->TileArray)
+		{
+			if (Tile->bIsRed)
+			{
+				for (AUnit* Unit : HumanPlayer->MyUnits)
 				{
-					EnemyAtRange.Add(Unit);
+					if (Unit->Position == GameField->GetXYPositionByRelativeLocation(Tile->GetActorLocation()))
+					{
+						EnemyAtRange.Add(Unit);
+					}
 				}
 			}
 		}
-	}
 
-	if (EnemyAtRange.Num() == 1)
-	{
-		Sniper->Attack(EnemyAtRange[0]);
-	}
-	else if (EnemyAtRange.Num() == 2)
-	{
-		int32 RandomNumber = FMath::RandRange(0, 1);
-		Sniper->Attack(EnemyAtRange[RandomNumber]);
-	}
+		if (EnemyAtRange.Num() == 1)
+		{
+			Sniper->Attack(EnemyAtRange[0]);
+		}
+		else if (EnemyAtRange.Num() == 2)
+		{
+			int32 RandomNumber = FMath::RandRange(0, 1);
+			Sniper->Attack(EnemyAtRange[RandomNumber]);
+		}
 
-	if (GameModality)
-	{
-		if (GameModality->CheckWin())
-			return;
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Couldn't find GameMode"));
+		if (GameModality)
+		{
+			if (GameModality->CheckWin())
+				return;
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Couldn't find GameMode"));
+		}
+
 	}
 
 	GameField->UnHighLight();
@@ -665,76 +614,79 @@ void ARandomPlayer::OnTurn()
 	GameInstance->SetTurnMessage(TEXT("AI (Random) Turn"));
 	BrawlerAttacked = false;
 	SniperAttacked = false;
+	IsMyTurn = true;
 	
 
 	if (!(SniperPlaced && BrawlerPlaced))
 	{
 		GetWorld()->GetTimerManager().SetTimer(TimerHandle1, [&]()
 			{
-				AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
-				AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
-				int32 RandomNumber, Rand;
-				Rand = -1;
-				do {
-					RandomNumber = FMath::RandRange(0, GameField->Size * GameField->Size - 1);
-				} while (GameField->TileArray[RandomNumber]->GetTileStatus() == ETileStatus::OCCUPIED);
-
-				UE_LOG(LogTemp, Warning, TEXT("Random index: %i"), RandomNumber);
-
-				if (!(SniperPlaced || BrawlerPlaced))
+				if (IsMyTurn)
 				{
-					Rand = FMath::RandRange(0, 1);
+					AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
+					AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+					int32 RandomNumber, Rand;
+					Rand = -1;
+					do {
+						RandomNumber = FMath::RandRange(0, GameField->Size * GameField->Size - 1);
+					} while (GameField->TileArray[RandomNumber]->GetTileStatus() == ETileStatus::OCCUPIED);
+
+					UE_LOG(LogTemp, Warning, TEXT("Random index: %i"), RandomNumber);
+
+					if (!(SniperPlaced || BrawlerPlaced))
+					{
+						Rand = FMath::RandRange(0, 1);
+					}
+
+					if (SniperPlaced || Rand == 0)
+					{
+
+						GameField->TileArray[RandomNumber]->SetTileStatus(2, ETileStatus::OCCUPIED);
+
+						int32 X = RandomNumber / GameField->Size;
+						int32 Y = RandomNumber % GameField->Size;
+
+						FVector Position = GameField->GetRelativeLocationByXYPosition(X, Y);
+						Position.Z = 1;
+						AUnit* Unit = GameModality->SpawnCellUnit(2, Position, EPawnType::BRAWLER);
+						BrawlerPlaced = true;
+						if (Unit)
+						{
+							MyUnits.Add(Unit);
+						}
+						else
+						{
+							UE_LOG(LogTemp, Warning, TEXT("Null Unit"));
+						}
+
+						FString LocationString = FString::Printf(TEXT("AI spawned a Brawler at the position (%i, %i)"), X, Y);
+						GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, LocationString);
+
+					}
+					else if (BrawlerPlaced || Rand == 1)
+					{
+						int32 X = RandomNumber / GameField->Size;
+						int32 Y = RandomNumber % GameField->Size;
+
+						FVector Position = GameField->GetRelativeLocationByXYPosition(X, Y);
+						Position.Z = 1;
+						AUnit* Unit = GameModality->SpawnCellUnit(2, Position, EPawnType::SNIPER);
+						SniperPlaced = true;
+						if (Unit)
+						{
+							MyUnits.Add(Unit);
+						}
+						else
+						{
+							UE_LOG(LogTemp, Warning, TEXT("Null Unit"));
+						}
+
+						FString LocationString = FString::Printf(TEXT("AI spawned a Sniper at the position (%i, %i)"), X, Y);
+						GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, LocationString);
+
+					}
+					GameModality->TurnNextPlayer();
 				}
-
-				if (SniperPlaced || Rand == 0)
-				{
-
-					GameField->TileArray[RandomNumber]->SetTileStatus(2, ETileStatus::OCCUPIED);
-
-					int32 X = RandomNumber / GameField->Size;
-					int32 Y = RandomNumber % GameField->Size;
-
-					FVector Position = GameField->GetRelativeLocationByXYPosition(X, Y);
-					Position.Z = 1;
-					AUnit* Unit = GameModality->SpawnCellUnit(2, Position, EPawnType::BRAWLER);
-					BrawlerPlaced = true;
-					if (Unit)
-					{
-						MyUnits.Add(Unit);
-					}
-					else
-					{
-						UE_LOG(LogTemp, Warning, TEXT("Null Unit"));
-					}
-
-					FString LocationString = FString::Printf(TEXT("AI spawned a Brawler at the position (%i, %i)"), X, Y);
-					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, LocationString);
-
-				}
-				else if (BrawlerPlaced || Rand == 1)
-				{
-					int32 X = RandomNumber / GameField->Size;
-					int32 Y = RandomNumber % GameField->Size;
-
-					FVector Position = GameField->GetRelativeLocationByXYPosition(X, Y);
-					Position.Z = 1;
-					AUnit* Unit = GameModality->SpawnCellUnit(2, Position, EPawnType::SNIPER);
-					SniperPlaced = true;
-					if (Unit)
-					{
-						MyUnits.Add(Unit);
-					}
-					else
-					{
-						UE_LOG(LogTemp, Warning, TEXT("Null Unit"));
-					}
-
-					FString LocationString = FString::Printf(TEXT("AI spawned a Sniper at the position (%i, %i)"), X, Y);
-					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, LocationString);
-
-					
-				}
-				GameModality->TurnNextPlayer();
 
 		}, 1.5, false);
 	
@@ -842,4 +794,319 @@ void ARandomPlayer::OnTurn()
 		
 	}
 }
+
+void ARandomPlayer::ResetFlags()
+{
+	BrawlerAttacked = false;
+	BrawlerMoved = false;
+	BrawlerPlaced = false;
+
+	SniperAttacked = false;
+	SniperMoved = false;
+	SniperPlaced = false;
+}
+
+
+
+int32 ARandomPlayer::CountStepsBFS(const FVector2D& Start, const FVector2D& Goal, AGameField* GF)
+{
+	// Converte le coordinate in indice (assumendo che Start e Goal siano in coordinate griglia intere)
+	int32 StartIndex = static_cast<int32>(Start.X) * GF->Size + static_cast<int32>(Start.Y);
+	int32 GoalIndex = static_cast<int32>(Goal.X) * GF->Size + static_cast<int32>(Goal.Y);
+
+	UE_LOG(LogTemp, Warning, TEXT("StartIndex: %i, GoalIndex: %i"), StartIndex, GoalIndex);
+
+	// Se partenza e arrivo coincidono, ritorna 0
+	if (StartIndex == GoalIndex)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("You're on your destination"));
+		return 0;
+	}
+
+	// Definisci un array di indici target.
+	// Se la tile di destinazione non è vuota, il target sarà direttamente quella tile;
+	// altrimenti, il target sarà una delle tile adiacenti.
+	TArray<int32> TargetIndices;
+	if (GF->TileArray[GoalIndex]->GetTileStatus() == ETileStatus::OCCUPIED)
+	{
+		// La tile di destinazione è vuota: usa le tile adiacenti
+		int32 GoalX = static_cast<int32>(Goal.X);
+		int32 GoalY = static_cast<int32>(Goal.Y);
+		if (GoalX > 0 && GF->TileArray[(GoalX - 1) * GF->Size + GoalY]->GetTileStatus() == ETileStatus::EMPTY)
+		{
+			TargetIndices.Add((GoalX - 1) * GF->Size + GoalY);
+		}
+
+		if (GoalX < GF->Size - 1 && GF->TileArray[(GoalX + 1) * GF->Size + GoalY]->GetTileStatus() == ETileStatus::EMPTY)
+		{
+			TargetIndices.Add((GoalX + 1) * GF->Size + GoalY);
+		}
+
+		if (GoalY > 0 && GF->TileArray[GoalX * GF->Size + (GoalY - 1)]->GetTileStatus() == ETileStatus::EMPTY)
+		{
+			TargetIndices.Add(GoalX * GF->Size + (GoalY - 1));
+		}
+		if (GoalY < GF->Size - 1 && GF->TileArray[GoalX * GF->Size + (GoalY + 1)]->GetTileStatus() == ETileStatus::EMPTY)
+		{
+			TargetIndices.Add(GoalX * GF->Size + (GoalY + 1));
+		}
+
+		if (TargetIndices.Num() == 0)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("No valid target tiles found!"));
+			return INT_MAX;
+		}
+
+	}
+	else
+	{
+		// La tile di destinazione non è vuota: il target è la tile stessa
+		TargetIndices.Add(GoalIndex);
+	}
+
+	// Per debug: stampa gli indici target
+	FString TargetsStr;
+	for (int32 idx : TargetIndices)
+	{
+		TargetsStr += TEXT("X:") + FString::FromInt(idx / GF->Size) + TEXT(" Y:") + FString::FromInt(idx % GF->Size) + TEXT(" ");
+	}
+	UE_LOG(LogTemp, Warning, TEXT("Target indices: %s"), *TargetsStr);
+
+	// Inizializza l'array dei passi
+	TArray<int32> Steps;
+	Steps.Init(-1, GF->Size * GF->Size);
+	Steps[StartIndex] = 0;
+
+	// Coda per la BFS
+	TQueue<int32> Queue;
+	Queue.Enqueue(StartIndex);
+
+	while (!Queue.IsEmpty())
+	{
+		int32 Current;
+		Queue.Dequeue(Current);
+
+		int32 x = Current / GF->Size;
+		int32 y = Current % GF->Size;
+
+		static const int32 DirX[4] = { 1, -1, 0, 0 };
+		static const int32 DirY[4] = { 0, 0, 1, -1 };
+
+		for (int i = 0; i < 4; i++)
+		{
+			int32 nx = x + DirX[i];
+			int32 ny = y + DirY[i];
+
+			if (nx >= 0 && nx < GF->Size && ny >= 0 && ny < GF->Size)
+			{
+				int32 NextIndex = nx * GF->Size + ny;
+
+				// Controlla che la tile sia libera e non ancora visitata
+				if (GF->TileArray[NextIndex]->GetTileStatus() == ETileStatus::EMPTY && Steps[NextIndex] == -1)
+				{
+					Steps[NextIndex] = Steps[Current] + 1;
+
+					// Se il NextIndex è uno degli obiettivi, ritorna il numero di passi
+					if (TargetIndices.Contains(NextIndex))
+					{
+						UE_LOG(LogTemp, Warning, TEXT("Steps needed: %i"), Steps[NextIndex]);
+						return Steps[NextIndex];
+					}
+
+					Queue.Enqueue(NextIndex);
+				}
+			}
+		}
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("No path found"));
+	return INT_MAX;
+}
+
+int32 ARandomPlayer::AStarSearch(const FVector2D& Start, const FVector2D& Goal, TArray<FVector2D>& Path)
+{
+	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+	if (!GameField)
+	{
+		return -1;
+	}
+
+	struct FNode
+	{
+		FVector2D Position;
+		int32 GCost; // Distanza dal punto di partenza
+		int32 HCost; // Distanza stimata fino al goal (euristica)
+		int32 FCost() const { return GCost + HCost; }
+		FNode* Parent;
+
+		FNode(FVector2D Pos, int32 G, int32 H, FNode* P = nullptr)
+			: Position(Pos), GCost(G), HCost(H), Parent(P) {
+		}
+	};
+
+	TMap<FVector2D, FNode*> OpenSet;
+	TMap<FVector2D, FNode*> ClosedSet;
+	TArray<FNode*> AllocatedNodes; // Per liberare memoria alla fine
+
+	FNode* StartNode = new FNode(Start, 0, FMath::Abs(Start.X - Goal.X) + FMath::Abs(Start.Y - Goal.Y));
+	OpenSet.Add(Start, StartNode);
+	AllocatedNodes.Add(StartNode);
+
+	while (OpenSet.Num() > 0)
+	{
+		// Trova il nodo con il costo F più basso
+		FNode* CurrentNode = nullptr;
+		for (auto& Pair : OpenSet)
+		{
+			if (!CurrentNode || Pair.Value->FCost() < CurrentNode->FCost())
+			{
+				CurrentNode = Pair.Value;
+			}
+		}
+
+		if (!CurrentNode)
+			break;
+
+		FVector2D CurrentPos = CurrentNode->Position;
+		OpenSet.Remove(CurrentPos);
+		ClosedSet.Add(CurrentPos, CurrentNode);
+
+		// Se raggiungiamo il Goal, ricostruiamo il percorso
+		if (CurrentPos == Goal)
+		{
+			while (CurrentNode)
+			{
+				Path.Insert(CurrentNode->Position, 0);
+				CurrentNode = CurrentNode->Parent;
+			}
+
+			int32 Cost = Path.Num() - 1;
+
+			// Libera la memoria allocata
+			for (FNode* Node : AllocatedNodes)
+			{
+				delete Node;
+			}
+
+			return Cost;
+		}
+
+		static const int32 DirX[4] = { 1, -1, 0, 0 };
+		static const int32 DirY[4] = { 0, 0, 1, -1 };
+		// Direzioni: destra, sinistra, giù, su
+		for (int i = 0; i < 4; i++)
+		{
+			FVector2D NeighborPos = FVector2D(CurrentPos.X + DirX[i], CurrentPos.Y + DirY[i]);
+
+			if (NeighborPos.X < 0 || NeighborPos.X >= GameField->Size || NeighborPos.Y < 0 || NeighborPos.Y >= GameField->Size)
+				continue; // Fuori dalla griglia
+
+			int32 NeighborIndex = static_cast<int32>(NeighborPos.X) * GameField->Size + static_cast<int32>(NeighborPos.Y);
+			if (GameField->TileArray[NeighborIndex]->GetTileStatus() != ETileStatus::EMPTY)
+				continue; // La Tile è occupata
+
+			if (ClosedSet.Contains(NeighborPos))
+				continue; // Già visitata
+
+			int32 NewGCost = CurrentNode->GCost + 1; // Movimento orizzontale/verticale costa 1
+			int32 NewHCost = FMath::Abs(NeighborPos.X - Goal.X) + FMath::Abs(NeighborPos.Y - Goal.Y);
+
+			if (!OpenSet.Contains(NeighborPos) || NewGCost < OpenSet[NeighborPos]->GCost)
+			{
+				FNode* NeighborNode = new FNode(NeighborPos, NewGCost, NewHCost, CurrentNode);
+				OpenSet.Add(NeighborPos, NeighborNode);
+				AllocatedNodes.Add(NeighborNode);
+			}
+		}
+	}
+
+	// Libera la memoria se non è stato trovato un percorso
+	for (FNode* Node : AllocatedNodes)
+	{
+		delete Node;
+	}
+
+	return -1; 
+}
+
+FVector2D ARandomPlayer::FindAStarDestination(AUnit* MovingUnit, AUnit* TargetUnit)
+{
+	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+	if (!MovingUnit || !TargetUnit || !GameField)
+	{
+		UE_LOG(LogTemp, Error, TEXT("FindAStarDestination: Invalid parameters"));
+		return MovingUnit ? MovingUnit->Position : FVector2D(-1, -1);
+	}
+
+	FVector2D Start = MovingUnit->Position;
+	FVector2D Target = TargetUnit->Position;
+
+	// Se l'unità è già adiacente al bersaglio, non serve muoversi
+	if (FMath::Abs(Start.X - Target.X) + FMath::Abs(Start.Y - Target.Y) == 1)
+	{
+		return Start;
+	}
+
+	// Trova le celle adiacenti al target che sono libere
+	TArray<FVector2D> TargetTiles;
+	int32 TargetX = static_cast<int32>(Target.X);
+	int32 TargetY = static_cast<int32>(Target.Y);
+	static const int32 DirX[4] = { 1, -1, 0, 0 };
+	static const int32 DirY[4] = { 0, 0, 1, -1 };
+
+	for (int i = 0; i < 4; i++)
+	{
+		int32 nx = TargetX + DirX[i];
+		int32 ny = TargetY + DirY[i];
+
+		if (nx >= 0 && nx < GameField->Size && ny >= 0 && ny < GameField->Size)
+		{
+			int32 TileIndex = nx * GameField->Size + ny;
+			if (GameField->TileArray[TileIndex]->GetTileStatus() == ETileStatus::EMPTY)
+			{
+				TargetTiles.Add(FVector2D(nx, ny));
+			}
+		}
+	}
+
+	// Se non ci sono celle libere intorno al target, fermati sulla posizione attuale
+	if (TargetTiles.Num() == 0)
+	{
+		TargetTiles.Add(Target);
+	}
+
+	// Esegui A* per trovare il percorso migliore tra Start e una delle TargetTiles
+	int32 BestCost = INT_MAX;
+	TArray<FVector2D> BestPath;
+
+	for (const FVector2D& GoalTile : TargetTiles)
+	{
+		TArray<FVector2D> Path;
+		int32 Cost = AStarSearch(Start, GoalTile, Path);
+		if (Cost >= 0 && Cost < BestCost)
+		{
+			BestCost = Cost;
+			BestPath = Path;
+		}
+	}
+
+	// Se non è stato trovato un percorso, ritorna la posizione attuale
+	if (BestPath.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("FindAStarDestination: No valid path found"));
+		return Start;
+	}
+
+	// Se il percorso ottimo ha lunghezza minore o uguale a MaxSteps, restituisci il punto finale
+	if (BestPath.Num() - 1 <= MovingUnit->MovementRange)
+	{
+		return BestPath.Last();
+	}
+	else
+	{
+		// Altrimenti, restituisci la cella raggiungibile dopo MaxSteps lungo il percorso
+		return BestPath[MovingUnit->MovementRange];
+	}
+}
+
 

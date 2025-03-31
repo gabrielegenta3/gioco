@@ -6,6 +6,8 @@
 #include "IContentBrowserSingleton.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameModality.h"
+#include "HumanPlayer.h"
+#include "RandomPlayer.h"
 
 
 // function to visit all the cells of the map
@@ -166,23 +168,24 @@ void AGameField::BeginPlay()
 
 void AGameField::ResetField()
 {
-	for (ATile* Obj : TileArray)
+	for (ATile* Tile : TileArray)
 	{
-		Obj->SetTileStatus(NOT_ASSIGNED, ETileStatus::EMPTY);
+		Tile->Destroy();
 	}
+	
+	this->TileArray.Empty();
+
+	GenerateField();
 
 	// send broadcast event to registered objects 
 	OnResetEvent.Broadcast();
-
+	
 	AGameModality* GameMode = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
 	GameMode->IsGameOver = false;
-	GameMode->ChoosePlayerAndStartGame();
 }
 
 void AGameField::GenerateField()
 {
-
-	
 	if (!GetWorld())
 	{
 		UE_LOG(LogTemp, Error, TEXT("GetWorld() è NULL!"));

@@ -123,7 +123,8 @@ void ATile::TileInit(bool isObstacle) {
 	else {
 		// load the material
 		StaticMeshComponent->SetMaterial(0, EmptyTile);
-
+		PlayerOwner = -1;
+		Status = ETileStatus::EMPTY;
 	}
 }
 
@@ -181,7 +182,7 @@ void ATile::ResetTile(bool isTotalReset)
 	if (isTotalReset)
 	{
 		bIsObstacle = false;
-		Status = ETileStatus::EMPTY;
+		this->SetTileStatus(-1, ETileStatus::EMPTY);
 	}
 }
 

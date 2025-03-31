@@ -152,6 +152,31 @@ void AHumanPlayer::OnBrawlerButtonClicked()
 
 void AHumanPlayer::OnResetButtonClicked()
 {
+	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+	Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetActorOfClass(GetWorld(), Agame_PlayerController::StaticClass()));
+	
+	PlayerC->HUD->TurnIntoMainMenuHUD();
+
+
+	ARandomPlayer* RandomPlayer = Cast<ARandomPlayer>(Cast<AGameModality>(GetWorld()->GetAuthGameMode())->Players[1]);
+
+	for (AUnit* Unit : this->MyUnits)
+	{
+		Unit->Destroy();
+	}
+	this->MyUnits.Empty();
+
+	for (AUnit* Unit : RandomPlayer->MyUnits)
+	{
+		Unit->Destroy();
+	}
+	RandomPlayer->MyUnits.Empty();
+
+	this->ResetFlags();
+
+	RandomPlayer->ResetFlags();
+
+	GameField->ResetField();
 }
 
 void AHumanPlayer::OnPassButtonClicked()
@@ -486,6 +511,19 @@ void AHumanPlayer::OnClick()
 			//UE_LOG(LogTemp, Warning, TEXT("Couldn't cast the Unit you clicked on"));
 		}
 	}
+}
+
+void AHumanPlayer::ResetFlags()
+{
+	BrawlerAttacked = false;
+	BrawlerMoved = false;
+	BrawlerPlaced = false;
+
+	SniperAttacked = false;
+	SniperMoved = false;
+	SniperPlaced = false;
+
+	IsMyTurn = false;
 }
 
 

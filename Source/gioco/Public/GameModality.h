@@ -65,7 +65,5 @@ public:
 	// called at the end of the game turn
 	void TurnNextPlayer();
 
-	void StartGame();
-
 	bool CheckWin();
 };

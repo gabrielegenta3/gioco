@@ -96,6 +96,13 @@ protected:
 	void AttackBrawler();
 
 	void AttackSniper();
+
+	int32 CountStepsBFS(const FVector2D& Start, const FVector2D& Goal, AGameField* GF);
+
+	UFUNCTION(BlueprintCallable, Category = "Pathfinding")
+	int32 AStarSearch(const FVector2D& Start, const FVector2D& Goal, TArray<FVector2D>& Path);
+
+	FVector2D FindAStarDestination(AUnit* MovingUnit, AUnit* TargetUnit);
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -104,4 +111,6 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	virtual void OnTurn() override;
+
+	void ResetFlags();
 };

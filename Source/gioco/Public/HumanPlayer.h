@@ -104,4 +104,5 @@ public:
 	UFUNCTION()
 	void OnClick();
 
+	void ResetFlags();
 };

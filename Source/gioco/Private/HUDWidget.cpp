@@ -333,6 +333,10 @@ void UHUDWidget::TurnIntoPlayHUD()
 	{
 		ResetButton->SetVisibility(ESlateVisibility::Visible);
 	}
+    if (WinLoseText)
+    {
+        WinLoseText->SetVisibility(ESlateVisibility::Collapsed);
+    }
 }
 
 void UHUDWidget::TurnIntoMainMenuHUD()
@@ -369,6 +373,10 @@ void UHUDWidget::TurnIntoMainMenuHUD()
 	{
 		PassButton->SetVisibility(ESlateVisibility::Collapsed);
 	}
+    if (WinLoseText)
+    {
+        WinLoseText->SetVisibility(ESlateVisibility::Collapsed);
+    }
 }
 
 void UHUDWidget::ShowWinLoseText(const FString& Message)
