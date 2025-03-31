@@ -169,7 +169,7 @@ void ARandomPlayer::MoveBrawler()
 {
 	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
 
-	if (IsMyTurn)
+	if (bIsMyTurn)
 	{
 		// he finds his Brawler
 		AUnit* Brawler = nullptr;
@@ -221,6 +221,7 @@ void ARandomPlayer::MoveBrawler()
 		FVector2D XYPosition(-1, -1);
 		TArray<ATile*> VisitableTiles;
 
+		// if is smart he goes after a unit, else he goes to a random one
 		if (bIsSmart)
 		{
 			int32 TileToBrawler = INT_MAX, TileToSniper = INT_MAX;
@@ -241,6 +242,7 @@ void ARandomPlayer::MoveBrawler()
 			FVector2D DestinationBrawler = FindAStarDestination(Brawler, EnemyBrawler);
 			FVector2D DestinationSniper = FindAStarDestination(Brawler, EnemySniper);
 			
+			// if he cant reach a unit he goes to another, if he cant either he goes to a random visitable tile
 			if (!(DestinationBrawler.X == -1 && DestinationSniper.X == -1))
 			{
 				if (TileToBrawler < TileToSniper || DestinationSniper.X == -1)
@@ -262,6 +264,21 @@ void ARandomPlayer::MoveBrawler()
 					{
 						XYPosition = FindAStarDestination(Brawler, EnemyBrawler);
 					}
+				}
+			}
+			else
+			{
+				for (ATile* Tile : GameField->TileArray)
+				{
+					if (Tile->bIsGreen)
+					{
+						VisitableTiles.Add(Tile);
+					}
+				}
+				if (VisitableTiles.Num() > 0)
+				{
+					int32 RandomIndex = FMath::RandRange(0, VisitableTiles.Num() - 1);
+					XYPosition = GameField->GetXYPositionByRelativeLocation(VisitableTiles[RandomIndex]->GetActorLocation());
 				}
 			}
 			
@@ -303,10 +320,11 @@ void ARandomPlayer::MoveBrawler()
 	GameField->UnHighLight();
 }
 
+// method to handle ai movement for sniper
 void ARandomPlayer::MoveSniper()
 {
 	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
-	if (IsMyTurn)
+	if (bIsMyTurn)
 	{
 		AUnit* Sniper = nullptr;
 		for (AUnit* Unit : MyUnits)
@@ -355,6 +373,7 @@ void ARandomPlayer::MoveSniper()
 		FVector2D XYPosition(-1, -1);
 		TArray<ATile*> VisitableTiles;
 
+		// if is smart he goes after a unit, else he goes to a random one
 		if (bIsSmart)
 		{
 			int32 TileToBrawler = INT_MAX, TileToSniper = INT_MAX;
@@ -375,6 +394,7 @@ void ARandomPlayer::MoveSniper()
 			FVector2D DestinationBrawler = FindAStarDestination(Sniper, EnemyBrawler);
 			FVector2D DestinationSniper = FindAStarDestination(Sniper, EnemySniper);
 
+			// if he cant reach a unit he goes to another, if he cant either he goes to a random visitable tile
 			if (!(DestinationBrawler.X == -1 && DestinationSniper.X == -1))
 			{
 				if (TileToBrawler < TileToSniper || DestinationSniper.X == -1)
@@ -439,9 +459,10 @@ void ARandomPlayer::MoveSniper()
 	
 }
 
+// method to highlight the enemy units on range
 void ARandomPlayer::HighlightAndAttackBrawler()
 {
-	if (IsMyTurn)
+	if (bIsMyTurn)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Brawler attacking"));
 		AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
@@ -469,9 +490,10 @@ void ARandomPlayer::HighlightAndAttackBrawler()
 	}
 }
 
+// method to highlight the enemy units on range
 void ARandomPlayer::HighlightAndAttackSniper()
 {
-	if (IsMyTurn)
+	if (bIsMyTurn)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Sniper attacking"));
 		AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
@@ -499,10 +521,11 @@ void ARandomPlayer::HighlightAndAttackSniper()
 	}
 }
 
+// method to let brawler attack, if he has more than one enemy unit on range he shots a random one
 void ARandomPlayer::AttackBrawler()
 {
 	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
-	if (IsMyTurn)
+	if (bIsMyTurn)
 	{
 		AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
 		AUnit* Brawler = nullptr;
@@ -562,11 +585,12 @@ void ARandomPlayer::AttackBrawler()
 	GameField->UnHighLight();
 }
 
+// method to let sniper attack, if he has more than one enemy unit on range he shots a random one
 void ARandomPlayer::AttackSniper()
 {
 
 	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
-	if (IsMyTurn)
+	if (bIsMyTurn)
 	{
 		AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
 		AUnit* Sniper = nullptr;
@@ -660,25 +684,33 @@ void ARandomPlayer::Tick(float DeltaTime)
 void ARandomPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
 }
+
+
 
 void ARandomPlayer::OnTurn()
 {
+	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+	if (GameField)
+	{
+		GameField->UnHighLight();
+	}
 	Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetActorOfClass(GetWorld(), Agame_PlayerController::StaticClass()));
 	if (PlayerC && PlayerC->HUD)
 		PlayerC->HUD->SetTurnText(2);
 
 	bBrawlerAttacked = false;
 	bSniperAttacked = false;
-	IsMyTurn = true;
+	bBrawlerMoved = false;
+	bSniperMoved = false;
+	bIsMyTurn = true;
 	
-
+	// if there is a unit to place he does
 	if (!(bSniperPlaced && bBrawlerPlaced))
 	{
 		GetWorld()->GetTimerManager().SetTimer(TimerHandle1, [&]()
 			{
-				if (IsMyTurn)
+				if (bIsMyTurn)
 				{
 					AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
 					AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
@@ -690,6 +722,7 @@ void ARandomPlayer::OnTurn()
 
 					UE_LOG(LogTemp, Warning, TEXT("Random index: %i"), RandomNumber);
 
+					// if no unit is placed he place a random one
 					if (!(bSniperPlaced || bBrawlerPlaced))
 					{
 						Rand = FMath::RandRange(0, 1);
@@ -739,6 +772,7 @@ void ARandomPlayer::OnTurn()
 
 					}
 
+					// every time he places a unit he updates the Unit HP TEXT
 					Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetActorOfClass(GetWorld(), Agame_PlayerController::StaticClass()));
 					if (PlayerC && PlayerC->HUD)
 					{
@@ -775,20 +809,22 @@ void ARandomPlayer::OnTurn()
 			}
 		}
 
+		// if he can attack he attacks (there is no difference between attacking firs with one or another)
 		if (Brawler && Brawler->CanAttack())
 		{
 			GetWorld()->GetTimerManager().SetTimer(BrawlerAttackTimerHandle, this, &ARandomPlayer::HighlightAndAttackBrawler, waitTime, false);
-			waitTime += 2.5;
+			waitTime += 2;
 			bBrawlerAttacked = true;
 		}
 
 		if (Sniper && Sniper->CanAttack())
 		{
 			GetWorld()->GetTimerManager().SetTimer(SniperAttackTimerHandle, this, &ARandomPlayer::HighlightAndAttackSniper, waitTime, false);
-			waitTime += 2.5;
+			waitTime += 2;
 			bSniperAttacked = true;
 		}
 
+		// then if they didn't already attacked they try to move 
 		if (RandomNumber == 0)
 		{
 			if (Brawler && !bBrawlerAttacked) 
@@ -815,6 +851,8 @@ void ARandomPlayer::OnTurn()
 				waitTime += 2.5;
 			}
 		}
+		
+		// if they only moved they didn't attack they try to attack 
 		GetWorld()->GetTimerManager().SetTimer(CanAttackTimerHandle, [&]()
 			{
 				int32 RandomNumber = FMath::RandRange(0, 1);
@@ -840,14 +878,14 @@ void ARandomPlayer::OnTurn()
 						GetWorld()->GetTimerManager().SetTimer(BrawlerAttackTimerHandle, this, &ARandomPlayer::HighlightAndAttackBrawler, wait, false);
 						bool IsActive = GetWorld()->GetTimerManager().IsTimerActive(BrawlerAttackTimerHandle);
 						UE_LOG(LogTemp, Warning, TEXT("BrawlerAttackTimerHandle active after SetTimer: %s"), IsActive ? TEXT("YES") : TEXT("NO"));
-						wait += 2.5;
+						wait += 2;
 					}
 					if (Sniper && !bSniperAttacked && Sniper->CanAttack())
 					{
 						GetWorld()->GetTimerManager().SetTimer(SniperAttackTimerHandle, this, &ARandomPlayer::HighlightAndAttackSniper, wait, false);
 						bool IsActive = GetWorld()->GetTimerManager().IsTimerActive(SniperAttackTimerHandle);
 						UE_LOG(LogTemp, Warning, TEXT("SniperAttackTimerHandle active after SetTimer: %s"), IsActive ? TEXT("YES") : TEXT("NO"));
-						wait += 2.5;
+						wait += 2;
 					}
 				}
 				else
@@ -872,7 +910,6 @@ void ARandomPlayer::OnTurn()
 				UE_LOG(LogTemp, Warning, TEXT("Finita lambda function"));
 			}, waitTime, false);
 
-		waitTime += 2;
 		AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
 		if (GameModality)
 		{
@@ -898,8 +935,8 @@ void ARandomPlayer::ResetFlags()
 }
 
 
-
-int32 ARandomPlayer::CountStepsBFS(const FVector2D& Start, const FVector2D& Goal, AGameField* GF)
+// method to just count steps from a start to a destination
+/*int32 ARandomPlayer::CountStepsBFS(const FVector2D& Start, const FVector2D& Goal, AGameField* GF)
 {
 	// Converte le coordinate in indice (assumendo che Start e Goal siano in coordinate griglia intere)
 	int32 StartIndex = static_cast<int32>(Start.X) * GF->Size + static_cast<int32>(Start.Y);
@@ -1003,40 +1040,47 @@ int32 ARandomPlayer::CountStepsBFS(const FVector2D& Start, const FVector2D& Goal
 
 	UE_LOG(LogTemp, Warning, TEXT("No path found"));
 	return INT_MAX;
-}
+}*/
 
 int32 ARandomPlayer::AStarSearch(const FVector2D& Start, const FVector2D& Goal, TArray<FVector2D>& Path)
 {
+	// Get the game field object
 	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
 	if (!GameField)
 	{
+		// Return -1 if no game field is found
 		return -1;
 	}
 
+	// Node structure for A* algorithm
 	struct FNode
 	{
-		FVector2D Position;
-		int32 GCost; // Distanza dal punto di partenza
-		int32 HCost; // Distanza stimata fino al goal (euristica)
-		int32 FCost() const { return GCost + HCost; }
-		FNode* Parent;
+		FVector2D Position;  // Position of the node
+		int32 GCost;         // Distance from the start node
+		int32 HCost;         // Estimated distance to the goal (heuristic)
+		int32 FCost() const { return GCost + HCost; } // Total cost (G + H)
+		FNode* Parent;       // Parent node for path reconstruction
 
+		// Constructor for initializing node with position, G, H costs, and parent
 		FNode(FVector2D Pos, int32 G, int32 H, FNode* P = nullptr)
 			: Position(Pos), GCost(G), HCost(H), Parent(P) {
 		}
 	};
 
+	// OpenSet stores nodes to be explored, ClosedSet stores already explored nodes
 	TMap<FVector2D, FNode*> OpenSet;
 	TMap<FVector2D, FNode*> ClosedSet;
-	TArray<FNode*> AllocatedNodes; // Per liberare memoria alla fine
+	TArray<FNode*> AllocatedNodes; // To clean up memory at the end
 
+	// Initialize the start node
 	FNode* StartNode = new FNode(Start, 0, FMath::Abs(Start.X - Goal.X) + FMath::Abs(Start.Y - Goal.Y));
 	OpenSet.Add(Start, StartNode);
 	AllocatedNodes.Add(StartNode);
 
+	// Main loop of A* algorithm
 	while (OpenSet.Num() > 0)
 	{
-		// Trova il nodo con il costo F più basso
+		// Find the node with the lowest F cost
 		FNode* CurrentNode = nullptr;
 		for (auto& Pair : OpenSet)
 		{
@@ -1046,6 +1090,7 @@ int32 ARandomPlayer::AStarSearch(const FVector2D& Start, const FVector2D& Goal, 
 			}
 		}
 
+		// If no valid node found, break out
 		if (!CurrentNode)
 			break;
 
@@ -1053,18 +1098,20 @@ int32 ARandomPlayer::AStarSearch(const FVector2D& Start, const FVector2D& Goal, 
 		OpenSet.Remove(CurrentPos);
 		ClosedSet.Add(CurrentPos, CurrentNode);
 
-		// Se raggiungiamo il Goal, ricostruiamo il percorso
+		// If the goal is reached, reconstruct the path
 		if (CurrentPos == Goal)
 		{
+			// Reconstruct the path by following the parent nodes
 			while (CurrentNode)
 			{
 				Path.Insert(CurrentNode->Position, 0);
 				CurrentNode = CurrentNode->Parent;
 			}
 
+			// Return the cost of the path (length of the path minus 1)
 			int32 Cost = Path.Num() - 1;
 
-			// Libera la memoria allocata
+			// Clean up allocated nodes
 			for (FNode* Node : AllocatedNodes)
 			{
 				delete Node;
@@ -1073,26 +1120,32 @@ int32 ARandomPlayer::AStarSearch(const FVector2D& Start, const FVector2D& Goal, 
 			return Cost;
 		}
 
+		// Directions: right, left, down, up
 		static const int32 DirX[4] = { 1, -1, 0, 0 };
 		static const int32 DirY[4] = { 0, 0, 1, -1 };
-		// Direzioni: destra, sinistra, giù, su
+		// Explore each neighbor of the current node
 		for (int i = 0; i < 4; i++)
 		{
 			FVector2D NeighborPos = FVector2D(CurrentPos.X + DirX[i], CurrentPos.Y + DirY[i]);
 
+			// Skip neighbors that are out of bounds
 			if (NeighborPos.X < 0 || NeighborPos.X >= GameField->Size || NeighborPos.Y < 0 || NeighborPos.Y >= GameField->Size)
-				continue; // Fuori dalla griglia
+				continue;
 
+			// Skip neighbors that are not empty (occupied tiles)
 			int32 NeighborIndex = static_cast<int32>(NeighborPos.X) * GameField->Size + static_cast<int32>(NeighborPos.Y);
 			if (GameField->TileArray[NeighborIndex]->GetTileStatus() != ETileStatus::EMPTY)
-				continue; // La Tile è occupata
+				continue;
 
+			// Skip neighbors that have already been visited
 			if (ClosedSet.Contains(NeighborPos))
-				continue; // Già visitata
+				continue;
 
-			int32 NewGCost = CurrentNode->GCost + 1; // Movimento orizzontale/verticale costa 1
+			// Calculate the new G and H costs for the neighbor node
+			int32 NewGCost = CurrentNode->GCost + 1; // Movement cost is 1 for horizontal/vertical moves
 			int32 NewHCost = FMath::Abs(NeighborPos.X - Goal.X) + FMath::Abs(NeighborPos.Y - Goal.Y);
 
+			// If the neighbor node is not in the open set or has a better G cost, add it to the open set
 			if (!OpenSet.Contains(NeighborPos) || NewGCost < OpenSet[NeighborPos]->GCost)
 			{
 				FNode* NeighborNode = new FNode(NeighborPos, NewGCost, NewHCost, CurrentNode);
@@ -1102,48 +1155,55 @@ int32 ARandomPlayer::AStarSearch(const FVector2D& Start, const FVector2D& Goal, 
 		}
 	}
 
-	// Libera la memoria se non è stato trovato un percorso
+	// Clean up allocated nodes if no path is found
 	for (FNode* Node : AllocatedNodes)
 	{
 		delete Node;
 	}
 
+	// Return -1 if no path was found
 	return -1;
 }
 
 FVector2D ARandomPlayer::FindAStarDestination(AUnit* MovingUnit, AUnit* TargetUnit)
 {
+	// Get the game field object
 	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
 	if (!MovingUnit || !TargetUnit || !GameField)
 	{
+		// Log an error if the parameters are invalid and return the current position of the moving unit
 		UE_LOG(LogTemp, Error, TEXT("FindAStarDestination: Invalid parameters"));
 		return MovingUnit ? MovingUnit->Position : FVector2D(-1, -1);
 	}
 
+	// Store the starting position and target position
 	FVector2D Start = MovingUnit->Position;
 	FVector2D Target = TargetUnit->Position;
 
-	// Se l'unità è già adiacente al bersaglio, non serve muoversi
+	// If the unit is already adjacent to the target, no need to move
 	if (FMath::Abs(Start.X - Target.X) + FMath::Abs(Start.Y - Target.Y) == 1)
 	{
 		return Start;
 	}
 
-	// Trova le celle adiacenti al target che sono libere
+	// Find the adjacent cells to the target that are free
 	TArray<FVector2D> TargetTiles;
 	int32 TargetX = static_cast<int32>(Target.X);
 	int32 TargetY = static_cast<int32>(Target.Y);
 	static const int32 DirX[4] = { 1, -1, 0, 0 };
 	static const int32 DirY[4] = { 0, 0, 1, -1 };
 
+	// Check the 4 adjacent directions (right, left, down, up)
 	for (int i = 0; i < 4; i++)
 	{
 		int32 nx = TargetX + DirX[i];
 		int32 ny = TargetY + DirY[i];
 
+		// If the neighbor is within grid bounds
 		if (nx >= 0 && nx < GameField->Size && ny >= 0 && ny < GameField->Size)
 		{
 			int32 TileIndex = nx * GameField->Size + ny;
+			// If the tile is empty, add it to the list of possible target tiles
 			if (GameField->TileArray[TileIndex]->GetTileStatus() == ETileStatus::EMPTY)
 			{
 				TargetTiles.Add(FVector2D(nx, ny));
@@ -1151,20 +1211,22 @@ FVector2D ARandomPlayer::FindAStarDestination(AUnit* MovingUnit, AUnit* TargetUn
 		}
 	}
 
-	// Se non ci sono celle libere intorno al target, fermati sulla posizione attuale
+	// If no free cells are found around the target, stop at the current position
 	if (TargetTiles.Num() == 0)
 	{
 		TargetTiles.Add(Target);
 	}
 
-	// Esegui A* per trovare il percorso migliore tra Start e una delle TargetTiles
+	// Perform A* to find the best path from Start to one of the target tiles
 	int32 BestCost = INT_MAX;
 	TArray<FVector2D> BestPath;
 
+	// Evaluate paths to each possible target tile
 	for (const FVector2D& GoalTile : TargetTiles)
 	{
 		TArray<FVector2D> Path;
 		int32 Cost = AStarSearch(Start, GoalTile, Path);
+		// Update the best path if a better one is found
 		if (Cost >= 0 && Cost < BestCost)
 		{
 			BestCost = Cost;
@@ -1172,21 +1234,21 @@ FVector2D ARandomPlayer::FindAStarDestination(AUnit* MovingUnit, AUnit* TargetUn
 		}
 	}
 
-	// Se non è stato trovato un percorso, ritorna la posizione attuale
+	// If no valid path was found, return the current position
 	if (BestPath.Num() == 0)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("FindAStarDestination: No valid path found"));
 		return FVector2D(-1, -1);
 	}
 
-	// Se il percorso ottimo ha lunghezza minore o uguale a MaxSteps, restituisci il punto finale
+	// If the best path length is less than or equal to the movement range, return the last position in the path
 	if (BestPath.Num() - 1 <= MovingUnit->MovementRange)
 	{
 		return BestPath.Last();
 	}
 	else
 	{
-		// Altrimenti, restituisci la cella raggiungibile dopo MaxSteps lungo il percorso
+		// Otherwise, return the reachable tile after moving the max number of steps
 		return BestPath[MovingUnit->MovementRange];
 	}
 }
@@ -1194,15 +1256,14 @@ FVector2D ARandomPlayer::FindAStarDestination(AUnit* MovingUnit, AUnit* TargetUn
 
 FString ARandomPlayer::GetCellString(const FVector2D& CellCoord)
 {
-	// Convertiamo la colonna in lettera: 0->A, 1->B, ...
+	// Convert the column to a letter: 0 -> A, 1 -> B, ...
 	int32 Column = static_cast<int32>(CellCoord.X);
 	TCHAR ColumnLetter = 'A' + Column;
 
-	// Convertiamo la riga in numero (aggiungiamo 1 per usare 1-based indexing)
+	// Convert the row to a number (add 1 for 1-based indexing)
 	int32 Row = static_cast<int32>(CellCoord.Y) + 1;
 
-	// Combiniamo la lettera e il numero in una stringa
+	// Combine the letter and number into a string
 	return FString::Printf(TEXT("%c%d"), ColumnLetter, Row);
 }
-
 

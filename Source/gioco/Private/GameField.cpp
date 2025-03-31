@@ -169,6 +169,7 @@ void AGameField::BeginPlay()
 
 void AGameField::ResetField()
 {
+	// to reset i need to destroy all tiles and empty the array, then i can re-generate gamefield
 	for (ATile* Tile : TileArray)
 	{
 		Tile->Destroy();
@@ -201,6 +202,7 @@ void AGameField::GenerateField()
 
 	GenerateObstacles(ObstacleDensity);
 
+	// after i generate properly obstacles he creates one by one all tiles 
 	for (int32 i = 0; i < Size; i++)
 	{
 		for (int32 j = 0; j < Size; j++)
@@ -247,116 +249,5 @@ FVector2D AGameField::GetXYPositionByRelativeLocation(const FVector& Location) c
 	return FVector2D(XPos, YPos);
 }
 
-bool AGameField::IsWinPosition(const FVector2D Position) const
-{
-	const int32 Offset = WinSize - 1;
-	// vertical lines
-	for (int32 IndexI = Position.X - Offset; IndexI <= Position.X; IndexI++)
-	{
-		if (IsWinLine(FVector2D(IndexI, Position.Y), FVector2D(IndexI + Offset, Position.Y)))
-		{
-			return true;
-		}
-	}
 
-	// horizontal lines
-	for (int32 IndexI = Position.Y - Offset; IndexI <= Position[1]; IndexI++)
-	{
-		if (IsWinLine(FVector2D(Position.X, IndexI), FVector2D(Position.X, IndexI + Offset)))
-		{
-			return true;
-		}
-	}
-
-	// diagonal lines
-	for (int32 IndexI = -Offset; IndexI <= 0; IndexI++)
-	{
-		if (IsWinLine(FVector2D(Position.X + IndexI, Position.Y + IndexI), FVector2D(Position.X + Offset + IndexI, Position.Y + Offset + IndexI)))
-		{
-			return true;
-		}
-		if (IsWinLine(FVector2D(Position.X + IndexI, Position.Y - IndexI), FVector2D(Position.X + Offset + IndexI, Position.Y - Offset - IndexI)))
-		{
-			return true;
-		}
-	}
-
-	return false;
-}
-
-inline bool AGameField::IsWinLine(const FVector2D Begin, const FVector2D End) const
-{
-	return IsValidPosition(Begin) && IsValidPosition(End) && AllEqual(GetLine(Begin, End));
-}
-
-inline bool AGameField::IsValidPosition(const FVector2D Position) const
-{
-	return 0 <= Position.X && Position.X < Size && 0 <= Position.Y && Position.Y < Size;
-}
-
-TArray<int32> AGameField::GetLine(const FVector2D Begin, const FVector2D End) const
-{
-	int32 XSign;
-	if (Begin.X == End.X)
-	{
-		XSign = 0;
-	}
-	else
-	{
-		XSign = Begin.X < End.X ? 1 : -1;
-	}
-
-	int32 YSign;
-	if (Begin.Y == End.Y)
-	{
-		YSign = 0;
-	}
-	else
-	{
-		YSign = Begin.Y < End.Y ? 1 : -1;
-	}
-
-	TArray<int32> Line;
-	int32 XVal = Begin.X - XSign;
-	int32 YVal = Begin.Y - YSign;
-	do
-	{
-		XVal += XSign;
-		YVal += YSign;
-		Line.Add((TileMap[FVector2D(XVal, YVal)])->GetOwner());
-	} while (XVal != End.X || YVal != End.Y);
-
-	return Line;
-}
-
-bool AGameField::AllEqual(const TArray<int32>& Array) const
-{
-	if (Array.Num() == 0)
-	{
-		return false;
-	}
-	const int32 Value = Array[0];
-
-	if (Value == NOT_ASSIGNED)
-	{
-		return false;
-	}
-
-	for (int32 IndexI = 1; IndexI < Array.Num(); IndexI++)
-	{
-		if (Value != Array[IndexI])
-		{
-			return false;
-		}
-	}
-
-	return true;
-}
-
-// Called every frame
-/*void AGameField::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-}*/
 

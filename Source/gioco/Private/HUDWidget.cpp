@@ -5,8 +5,8 @@
 
 bool UHUDWidget::Initialize()
 {
-	bool bSuccess = Super::Initialize();
-	if (!bSuccess) return false;
+    bool bSuccess = Super::Initialize();
+    if (!bSuccess) return false;
 
     if (!WidgetTree)
     {
@@ -14,9 +14,9 @@ bool UHUDWidget::Initialize()
             return false;
     }
 
-	// create a canvas as RootWidget
+    // Create a canvas as RootWidget
     RootCanvas = WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("RootCanvas"));
-    if (!RootCanvas) 
+    if (!RootCanvas)
     {
         UE_LOG(LogTemp, Error, TEXT("Cant put any root canvas!"))
     }
@@ -25,10 +25,10 @@ bool UHUDWidget::Initialize()
     BackgroundImage = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("BackgroundImage"));
     if (BackgroundImage)
     {
-        // Imposta il colore con opacità (ad esempio, nero semitrasparente)
+        // Set the color with opacity (for example, semi-transparent black)
         BackgroundImage->SetColorAndOpacity(FColor(0, 119, 179).ReinterpretAsLinear());
 
-        // Aggiungi l'immagine al canvas
+        // Add the image to the canvas
         UCanvasPanelSlot* BackgroundSlot = RootCanvas->AddChildToCanvas(BackgroundImage);
         if (BackgroundSlot)
         {
@@ -37,19 +37,19 @@ bool UHUDWidget::Initialize()
         }
     }
 
-    // Creiamo il bottone Sniper
+    // To create sniper button
     SniperButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("SniperButton"));
     if (SniperButton)
     {
-        // Creiamo un testo per il bottone
+        // To create the button text
         UTextBlock* SniperButtonText = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("SniperText"));;
         if (SniperButtonText)
         {
             SniperButtonText->SetText(FText::FromString("Sniper"));
             SniperButton->AddChild(SniperButtonText);
         }
-       
-        // Aggiungiamo il bottone al canvas
+
+        // Add the button to the canvas
         UCanvasPanelSlot* SniperSlot = RootCanvas->AddChildToCanvas(SniperButton);
         if (SniperSlot)
         {
@@ -57,18 +57,18 @@ bool UHUDWidget::Initialize()
             SniperSlot->SetSize(FVector2D(150.f, 50.f));
         }
 
-        // Colleghiamo l'evento OnClicked
+        // Link the OnClicked event
         if (AHumanPlayer* HP = Cast<AHumanPlayer>(GetOwningPlayerPawn()))
         {
             SniperButton->OnClicked.AddDynamic(HP, &AHumanPlayer::OnSniperButtonClicked);
         }
     }
 
-    // Creiamo il bottone Brawler
+    // Create the Brawler button
     BrawlerButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("BrawlerButton"));
     if (BrawlerButton)
     {
-        // Creiamo un testo per il bottone
+        // Create text for the button
         UTextBlock* BrawlerButtonText = NewObject<UTextBlock>(this, UTextBlock::StaticClass());
         if (BrawlerButtonText)
         {
@@ -84,7 +84,7 @@ bool UHUDWidget::Initialize()
         }
 
         // OnClicked event
-        // link the event
+        // Link the event
         if (AHumanPlayer* HP = Cast<AHumanPlayer>(GetOwningPlayerPawn()))
         {
             BrawlerButton->OnClicked.AddDynamic(HP, &AHumanPlayer::OnBrawlerButtonClicked);
@@ -94,7 +94,7 @@ bool UHUDWidget::Initialize()
     PassButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("PassButton"));
     if (PassButton)
     {
-        // Creiamo un testo per il bottone
+        // Create text for the button
         UTextBlock* PassButtonText = NewObject<UTextBlock>(this, UTextBlock::StaticClass());
         if (PassButtonText)
         {
@@ -109,18 +109,18 @@ bool UHUDWidget::Initialize()
             PassSlot->SetSize(FVector2D(150.f, 50.f));
         }
 
-        // Evento OnClicked
-        // Colleghiamo l'evento OnClicked
+        // OnClicked event
+        // Link the OnClicked event
         if (AHumanPlayer* HP = Cast<AHumanPlayer>(GetOwningPlayerPawn()))
         {
             PassButton->OnClicked.AddDynamic(HP, &AHumanPlayer::OnPassButtonClicked);
         }
     }
-    
+
     ResetButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("ResetButton"));
     if (ResetButton)
     {
-        // Creiamo un testo per il bottone
+        // Create text for the button
         UTextBlock* ResetButtonText = NewObject<UTextBlock>(this, UTextBlock::StaticClass());
         if (ResetButtonText)
         {
@@ -135,14 +135,14 @@ bool UHUDWidget::Initialize()
             ResetSlot->SetSize(FVector2D(150.f, 50.f));
         }
 
-        // Evento OnClicked
-        // Colleghiamo l'evento OnClicked
+        // OnClicked event
+        // Link the OnClicked event
         if (AHumanPlayer* HP = Cast<AHumanPlayer>(GetOwningPlayerPawn()))
         {
             ResetButton->OnClicked.AddDynamic(HP, &AHumanPlayer::OnResetButtonClicked);
         }
     }
-    
+
     ScrollBox = WidgetTree->ConstructWidget<UScrollBox>(UScrollBox::StaticClass(), TEXT("ScrollBox"));
     if (ScrollBox)
     {
@@ -150,21 +150,20 @@ bool UHUDWidget::Initialize()
         if (ScrollSlot)
         {
 
-            // Posizionata in basso a destra
+            // Positioned at the bottom right
             ScrollSlot->SetAnchors(FAnchors(0.9f, 0.9f, 0.9f, 0.9f));
-            ScrollSlot->SetAlignment(FVector2D(1.f, 1.f)); // Allineata all'angolo in basso a destra
+            ScrollSlot->SetAlignment(FVector2D(1.f, 1.f)); // Aligned to the bottom-right corner
 
-   
             ScrollSlot->SetSize(FVector2D(300, 300));
 
-            // Mantiene la scrollbar visibile
+            // Keeps the scrollbar visible
             ScrollBox->SetScrollBarVisibility(ESlateVisibility::Visible);
         }
     }
 
     TurnText = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("TurnText"));
 
-    if (TurnText) 
+    if (TurnText)
     {
         UCanvasPanelSlot* TurnTextSlot = RootCanvas->AddChildToCanvas(TurnText);
 
@@ -180,7 +179,7 @@ bool UHUDWidget::Initialize()
     }
 
 
-    // Creazione dei TextBlock per gli HP
+    // Create the TextBlock for HP
     HumanUnitsText = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("HumanUnits"));
     RandomUnitsText = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("RandomUnits"));
 
@@ -209,12 +208,12 @@ bool UHUDWidget::Initialize()
     DifficultyText = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("DifficultyText"));
     if (DifficultyText)
     {
-        // Imposta il testo
+        // Set the text
         DifficultyText->SetText(FText::FromString("Choose CPU difficulty to choose the beginner and start"));
-		DifficultyText->SetJustification(ETextJustify::Center);
-		DifficultyText->SetFont(FSlateFontInfo(FPaths::EngineContentDir() / TEXT("Slate/Fonts/Roboto-Regular.ttf"), 40));
+        DifficultyText->SetJustification(ETextJustify::Center);
+        DifficultyText->SetFont(FSlateFontInfo(FPaths::EngineContentDir() / TEXT("Slate/Fonts/Roboto-Regular.ttf"), 40));
 
-        // Aggiungi il text block al Canvas
+        // Add the text block to the Canvas
         UCanvasPanelSlot* TextSlot = RootCanvas->AddChildToCanvas(DifficultyText);
         if (TextSlot)
         {
@@ -272,13 +271,13 @@ bool UHUDWidget::Initialize()
                 EasyButtonText->SetText(FText::FromString("Easy"));
                 EasyButton->AddChild(EasyButtonText);
             }
+
             if (AHumanPlayer* HP = Cast<AHumanPlayer>(GetOwningPlayerPawn()))
             {
                 EasyButton->OnClicked.AddDynamic(HP, &AHumanPlayer::OnEasyButtonClicked);
             }
         }
     }
-
 
     // ------------------------------------------------------
 	// Win/Lose/Tie Text
@@ -363,6 +362,7 @@ void UHUDWidget::ShowPassButton()
     }
 }
 
+// hiding and showing widget based on what I need in my PlayHUD
 void UHUDWidget::TurnIntoPlayHUD()
 {
 	if (DifficultyText)
@@ -418,6 +418,7 @@ void UHUDWidget::TurnIntoPlayHUD()
     
 }
 
+// hiding and showing widget based on what I need in my MainMenuHUD
 void UHUDWidget::TurnIntoMainMenuHUD()
 {
 	if (DifficultyText)
@@ -474,6 +475,7 @@ void UHUDWidget::TurnIntoMainMenuHUD()
     }
 }
 
+// hiding and showing widget based on what I need while showing my WinLoseText
 void UHUDWidget::ShowWinLoseText(const FString& Message)
 {
 	if (WinLoseText)
@@ -528,6 +530,7 @@ void UHUDWidget::ShowWinLoseText(const FString& Message)
     }
 }
 
+// method to easily add TextBlox to scroll bar
 void UHUDWidget::AddTextToScrollBox(const FString& Message)
 {
     if (ScrollBox)
@@ -551,6 +554,7 @@ void UHUDWidget::ClearScrollBox()
     }
 }
 
+// method to check all units HP and update my Widget
 void UHUDWidget::UpdateUnitHP()
 {
     AHumanPlayer* HumanPlayer = Cast<AHumanPlayer>(Cast<AGameModality>(GetWorld()->GetAuthGameMode())->Players[0]);
@@ -602,6 +606,7 @@ void UHUDWidget::ClearUnitHP()
     RandomUnitsText->SetText(FText::FromString(FString::Printf(TEXT(""))));
 }
 
+// setting turn text based on whose turn it is
 void UHUDWidget::SetTurnText(int32 PlayerNumber)
 {
     if (PlayerNumber == 1)

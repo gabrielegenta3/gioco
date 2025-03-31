@@ -85,6 +85,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
 	bool bBrawlerPlaced;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
+	bool bCanPass;
+
 	// function to check in which tile a Unit could go based on their max step
 	void BFSMovementRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TArray<bool>& visited, AGameField* GF);
 

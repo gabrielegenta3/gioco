@@ -86,21 +86,6 @@ public:
 	// return (x,y) position given a relative position
 	FVector2D GetXYPositionByRelativeLocation(const FVector& Location) const;
 
-	// check if a position is a win position
-	bool IsWinPosition(const FVector2D Position) const;
-
-	// check if is a win line
-	inline bool IsWinLine(const FVector2D Begin, const FVector2D End) const;
-
-	// checking if is a valid field position
-	inline bool IsValidPosition(const FVector2D Position) const;
-
-	// get a line given a begin and end positions
-	TArray<int32> GetLine(const FVector2D Begin, const FVector2D End) const;
-
-	// check if a line contains all equal elements
-	bool AllEqual(const TArray<int32>& Array) const;
-
 	// function to generate obstacles
 	TArray<bool> GenerateObstacles(float ObstaclePercentage);
 

@@ -28,11 +28,11 @@ void AHumanPlayer::BFSMovementRange(int32 startX, int32 startY, int32 size, int3
 		int32 dist;
 		distanceQueue.Dequeue(dist);
 
-		// Se dist >= maxSteps, non esploriamo più
+		// if dist >= maxSteps, we dont explore anymore
 		if (dist >= maxSteps)
 			continue;
 
-		// 4 direzioni
+		// 4 direction
 		static const int32 DirX[4] = { 1, -1, 0, 0 };
 		static const int32 DirY[4] = { 0, 0, 1, -1 };
 
@@ -61,7 +61,7 @@ void AHumanPlayer::BFSMovementRange(int32 startX, int32 startY, int32 size, int3
 void AHumanPlayer::BFSAttackRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TArray<bool>& visited, AGameField* GF)
 {
 	TQueue<FIntPoint> queue;
-	TQueue<int32> distanceQueue; // per salvare i passi correnti
+	TQueue<int32> distanceQueue; // to save current steps
 
 	queue.Enqueue(FIntPoint(startX, startY));
 	distanceQueue.Enqueue(0);
@@ -77,11 +77,11 @@ void AHumanPlayer::BFSAttackRange(int32 startX, int32 startY, int32 size, int32 
 		int32 dist;
 		distanceQueue.Dequeue(dist);
 
-		// Se dist >= maxSteps, non esploriamo più
+		// If dist >= maxSteps, do not explore further
 		if (dist >= maxSteps)
 			continue;
 
-		// 4 direzioni
+		// 4 directions
 		static const int32 DirX[4] = { 1, -1, 0, 0 };
 		static const int32 DirY[4] = { 0, 0, 1, -1 };
 
@@ -95,7 +95,7 @@ void AHumanPlayer::BFSAttackRange(int32 startX, int32 startY, int32 size, int32 
 				if (!visited[newIndex])
 				{
 					visited[newIndex] = true;
-					if(!GF->TileArray[newIndex]->bIsObstacle && GF->TileArray[newIndex]->PlayerOwner == 2)
+					if (!GF->TileArray[newIndex]->bIsObstacle && GF->TileArray[newIndex]->PlayerOwner == 2)
 						GF->TileArray[newIndex]->HighLight();
 
 					queue.Enqueue(FIntPoint(nx, ny));
@@ -108,14 +108,14 @@ void AHumanPlayer::BFSAttackRange(int32 startX, int32 startY, int32 size, int32 
 
 FString AHumanPlayer::GetCellString(const FVector2D& CellCoord)
 {
-	// Convertiamo la colonna in lettera: 0->A, 1->B, ...
+	// Convert the column to a letter: 0->A, 1->B, ...
 	int32 Column = static_cast<int32>(CellCoord.X);
 	TCHAR ColumnLetter = 'A' + Column;
 
-	// Convertiamo la riga in numero (aggiungiamo 1 per usare 1-based indexing)
+	// Convert the row to a number (add 1 to use 1-based indexing)
 	int32 Row = static_cast<int32>(CellCoord.Y) + 1;
 
-	// Combiniamo la lettera e il numero in una stringa
+	// Combine the letter and number into a string
 	return FString::Printf(TEXT("%c%d"), ColumnLetter, Row);
 }
 
@@ -143,11 +143,12 @@ AHumanPlayer::AHumanPlayer()
 	bBrawlerMoved = false;
 	bSniperAttacked = false;
 	bBrawlerAttacked = false;
+	bCanPass = true;
 }
 
 void AHumanPlayer::OnSniperButtonClicked()
 {
-	if (IsMyTurn)
+	if (bIsMyTurn)
 	{
 		GameInstance->bSniperButtonClicked = true;
 		GameInstance->bBrawlerButtonClicked = false;
@@ -156,7 +157,7 @@ void AHumanPlayer::OnSniperButtonClicked()
 
 void AHumanPlayer::OnBrawlerButtonClicked()
 {
-	if (IsMyTurn)
+	if (bIsMyTurn)
 	{
 		GameInstance->bBrawlerButtonClicked = true;
 		GameInstance->bSniperButtonClicked = false;
@@ -168,13 +169,14 @@ void AHumanPlayer::OnResetButtonClicked()
 	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
 	Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetActorOfClass(GetWorld(), Agame_PlayerController::StaticClass()));
 	
+	// i have to clear all and let choose difficulty to user
 	PlayerC->HUD->TurnIntoMainMenuHUD();
 	PlayerC->HUD->ClearScrollBox();
 	PlayerC->HUD->ClearUnitHP();
 
 
 	ARandomPlayer* RandomPlayer = Cast<ARandomPlayer>(Cast<AGameModality>(GetWorld()->GetAuthGameMode())->Players[1]);
-
+	// then i destroy all my units and empty my array and do the same to the random player
 	for (AUnit* Unit : this->MyUnits)
 	{
 		Unit->Destroy();
@@ -191,6 +193,7 @@ void AHumanPlayer::OnResetButtonClicked()
 
 	RandomPlayer->ResetFlags();
 
+	// i reset field so i could restart with another obstacle distribution
 	GameField->ResetField();
 
 	PlayerC->HUD->UpdateUnitHP();
@@ -199,12 +202,13 @@ void AHumanPlayer::OnResetButtonClicked()
 void AHumanPlayer::OnPassButtonClicked()
 {
 	AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
-	if (IsMyTurn)
+	if (bIsMyTurn && bCanPass)
 	{
 		GameModality->TurnNextPlayer();
 	}
 }
 
+// to set IA difficulty and start
 void AHumanPlayer::OnHardButtonClicked()
 {
 	AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
@@ -255,7 +259,12 @@ void AHumanPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 void AHumanPlayer::OnTurn()
 {
-	IsMyTurn = true;
+	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
+	if (GameField)
+	{
+		GameField->UnHighLight();
+	}
+	bIsMyTurn = true;
 	bSniperAttacked = false;
 	bBrawlerAttacked = false;
 	bSniperMoved = false;
@@ -271,7 +280,7 @@ void AHumanPlayer::OnClick()
 	FHitResult Hit = FHitResult(ForceInit);
 	// GetHitResultUnderCursor function sends a ray from the mouse cursor on the screen and returns the hit result
 	GetWorld()->GetFirstPlayerController()->GetHitResultUnderCursor(ECollisionChannel::ECC_Pawn, true, Hit);
-	if (Hit.bBlockingHit && IsMyTurn && GameInstance->bSniperButtonClicked)  // if sniper button is clicked and the player clicked on a valid tile he spawns his sniper
+	if (Hit.bBlockingHit && bIsMyTurn && GameInstance->bSniperButtonClicked)  // if sniper button is clicked and the player clicked on a valid tile he spawns his sniper
 	{
 		if (ATile* CurrTile = Cast<ATile>(Hit.GetActor()))
 		{
@@ -320,7 +329,7 @@ void AHumanPlayer::OnClick()
 			}
 		}
 	} 
-	else if (Hit.bBlockingHit && IsMyTurn && GameInstance->bBrawlerButtonClicked)  // if brawler button is clicked and the player clicked on a valid tile he spawns his brawler
+	else if (Hit.bBlockingHit && bIsMyTurn && GameInstance->bBrawlerButtonClicked)  // if brawler button is clicked and the player clicked on a valid tile he spawns his brawler
 	{
 		if (ATile* CurrTile = Cast<ATile>(Hit.GetActor()))
 		{
@@ -370,7 +379,7 @@ void AHumanPlayer::OnClick()
 			}
 		}
 	}
-	else if (Hit.bBlockingHit && IsMyTurn && GameInstance->bIsUnitClicked && bSniperPlaced && bBrawlerPlaced)  // if player already clicked on a unit you can click another unit to attack him if you can, click your unit to 
+	else if (Hit.bBlockingHit && bIsMyTurn && GameInstance->bIsUnitClicked && bSniperPlaced && bBrawlerPlaced)  // if player already clicked on a unit you can click another unit to attack him if you can, click your unit to 
 	{																		// unhighlight tiles, click your other unit to highlight. You could also click another tile or unit but it does nothing obv
 		if (AUnit* CurrUnit = Cast<AUnit>(Hit.GetActor())) {
 			AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
@@ -485,13 +494,12 @@ void AHumanPlayer::OnClick()
 							bSniperMoved = true;
 						}
 
-
-						
 						GameInstance->SelectedUnit = nullptr;
 						GameInstance->bIsUnitClicked = false;
-
+						bCanPass = false;
 						GetWorldTimerManager().SetTimer(MoveTimerHandle, [&]()
 							{
+								bCanPass = true;
 								if (bSniperMoved && bBrawlerMoved)
 								{
 									if ((bSniperAttacked && bBrawlerAttacked) || !this->CanAttack())
@@ -507,7 +515,7 @@ void AHumanPlayer::OnClick()
 			}
 		}
 	}
-	else if (Hit.bBlockingHit && IsMyTurn && !GameInstance->bIsMoving && bSniperPlaced && bBrawlerPlaced)  // if nothing is clicked you can highlight
+	else if (Hit.bBlockingHit && bIsMyTurn && !GameInstance->bIsMoving && bSniperPlaced && bBrawlerPlaced)  // if nothing is clicked you can highlight
 	{
 		if (AUnit* CurrUnit = Cast<AUnit>(Hit.GetActor())) 
 		{
@@ -548,10 +556,6 @@ void AHumanPlayer::OnClick()
 				
 			}
 		}
-		else
-		{
-			//UE_LOG(LogTemp, Warning, TEXT("Couldn't cast the Unit you clicked on"));
-		}
 	}
 }
 
@@ -565,7 +569,7 @@ void AHumanPlayer::ResetFlags()
 	bSniperMoved = false;
 	bSniperPlaced = false;
 
-	IsMyTurn = false;
+	bIsMyTurn = false;
 }
 
 
@@ -576,7 +580,7 @@ bool AHumanPlayer::CanAttack()
 	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
 	for (AUnit* Unit : MyUnits)
 	{
-		if (Unit)  // we need to see if at least one can attack
+		if (Unit)  // we need to see if at least one of your unit can attack
 		{
 			if ((Unit->PawnType == EPawnType::SNIPER && this->bSniperAttacked) || (Unit->PawnType == EPawnType::BRAWLER && this->bBrawlerAttacked))
 			{

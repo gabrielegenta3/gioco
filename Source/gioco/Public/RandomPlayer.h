@@ -52,9 +52,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
 	bool bIsSmart;  //^=.=^
 
+	// All the timer handle i use 
 	FTimerHandle TimerHandle1;
-
-	FTimerHandle TimerHandle2;
 
 	FTimerHandle BrawlerHighlightTimerHandle;
 
@@ -100,7 +99,7 @@ protected:
 
 	void AttackSniper();
 
-	int32 CountStepsBFS(const FVector2D& Start, const FVector2D& Goal, AGameField* GF);
+	//int32 CountStepsBFS(const FVector2D& Start, const FVector2D& Goal, AGameField* GF);
 
 	UFUNCTION(BlueprintCallable, Category = "Pathfinding")
 	int32 AStarSearch(const FVector2D& Start, const FVector2D& Goal, TArray<FVector2D>& Path);

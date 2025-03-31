@@ -59,7 +59,6 @@ void AGameModality::BeginPlay()
 }
 
 
-
 void AGameModality::ChoosePlayerAndStartGame()
 {
 	CurrentPlayer = FMath::RandRange(0, Players.Num() - 1);
@@ -76,25 +75,26 @@ void AGameModality::ChoosePlayerAndStartGame()
 	Players[CurrentPlayer]->OnTurn();
 }
 
+// method to properly and safely spawn a unit
 AUnit* AGameModality::SpawnCellUnit(int32 PlayerNumber, const FVector& SpawnPosition, const EPawnType Type)
 {
 	AGameField* FoundField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
 	if (!FoundField)
 	{
-        UE_LOG(LogTemp, Error, TEXT("AGameField non trovato! Impossibile spawnare unita'."));
+        UE_LOG(LogTemp, Error, TEXT("AGameField not found! Unable to spawn units"));
 		return nullptr;
 	}
 	FVector2D XYPosition =  FoundField->GetXYPositionByRelativeLocation(SpawnPosition);
 	if (!UnitClass)
 	{
-		UE_LOG(LogTemp, Error, TEXT("UnitClass non è stato inizializzato!"));
+		UE_LOG(LogTemp, Error, TEXT("UnitClass has not been initialized!"));
 		return nullptr;
 	}
 	
 	AUnit* Unit = GetWorld()->SpawnActor<AUnit>(UnitClass, SpawnPosition, FRotator::ZeroRotator);
 	if (!Unit)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Impossibile spawnare AUnit a %s"), *SpawnPosition.ToString());
+		UE_LOG(LogTemp, Warning, TEXT("Failed to spawn AUnit at %s"), *SpawnPosition.ToString());
 		return nullptr;
 	}
 					
@@ -110,7 +110,14 @@ AUnit* AGameModality::SpawnCellUnit(int32 PlayerNumber, const FVector& SpawnPosi
 
 int32 AGameModality::GetNextPlayer(int32 Player)
 {
-	return int32();
+	if (Players[0]->bIsMyTurn)
+	{
+		return 2;
+	}
+	else
+	{
+		return 1;
+	}
 }
 
 void AGameModality::TurnNextPlayer()
@@ -122,19 +129,20 @@ void AGameModality::TurnNextPlayer()
 	}
 
 	// Cambia il turno
-	Players[0]->IsMyTurn = !Players[0]->IsMyTurn;
-	Players[1]->IsMyTurn = !Players[1]->IsMyTurn;
+	Players[0]->bIsMyTurn = !Players[0]->bIsMyTurn;
+	Players[1]->bIsMyTurn = !Players[1]->bIsMyTurn;
 
 	// Determina il giocatore corrente
-	IPlayerInterface* Player = Cast<IPlayerInterface>(Players[0]->IsMyTurn ? Players[0] : Players[1]);
+	IPlayerInterface* Player = Cast<IPlayerInterface>(Players[0]->bIsMyTurn ? Players[0] : Players[1]);
 
-	UE_LOG(LogTemp, Warning, TEXT("Next turn: %s"), Players[0]->IsMyTurn ? TEXT("PLAYER") : TEXT("CPU"));
+	UE_LOG(LogTemp, Warning, TEXT("Next turn: %s"), Players[0]->bIsMyTurn ? TEXT("PLAYER") : TEXT("CPU"));
 
 	// Attiva il turno del giocatore corrente
 	Player->OnTurn();
 }
 
 
+// I check if someone has lost all his units and then if they do I show WinLoseText
 bool AGameModality::CheckWin()
 {
 	AHumanPlayer* HumanPlayer = Cast<AHumanPlayer>(Players[0]);
@@ -145,24 +153,24 @@ bool AGameModality::CheckWin()
 	{
 		if (HumanPlayer->MyUnits.Num() == 0 && RandomPlayer->MyUnits.Num() == 0)
 		{
-			HumanPlayer->IsMyTurn = false;
-			RandomPlayer->IsMyTurn = false;
+			HumanPlayer->bIsMyTurn = false;
+			RandomPlayer->bIsMyTurn = false;
 			IsGameOver = true;
 			PlayerC->HUD->ShowWinLoseText("YOU GOT A DRAW!");
 			return true;
 		}
 		else if (HumanPlayer->MyUnits.Num() == 0)
 		{
-			HumanPlayer->IsMyTurn = false;
-			RandomPlayer->IsMyTurn = false;
+			HumanPlayer->bIsMyTurn = false;
+			RandomPlayer->bIsMyTurn = false;
 			IsGameOver = true;
 			PlayerC->HUD->ShowWinLoseText("YOU LOSE!");
 			return true;
 		}
 		else if (RandomPlayer->MyUnits.Num() == 0)
 		{
-			HumanPlayer->IsMyTurn = false;
-			RandomPlayer->IsMyTurn = false;
+			HumanPlayer->bIsMyTurn = false;
+			RandomPlayer->bIsMyTurn = false;
 			IsGameOver = true;
 			PlayerC->HUD->ShowWinLoseText("YOU WIN!");
 			return true;
