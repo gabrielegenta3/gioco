@@ -209,7 +209,7 @@ bool UHUDWidget::Initialize()
     if (DifficultyText)
     {
         // Set the text
-        DifficultyText->SetText(FText::FromString("Choose CPU difficulty to choose the beginner and start"));
+        DifficultyText->SetText(FText::FromString("Select the CPU difficulty to choose the beginner and start"));
         DifficultyText->SetJustification(ETextJustify::Center);
         DifficultyText->SetFont(FSlateFontInfo(FPaths::EngineContentDir() / TEXT("Slate/Fonts/Roboto-Regular.ttf"), 40));
 
