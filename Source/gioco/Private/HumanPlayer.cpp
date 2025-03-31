@@ -208,7 +208,7 @@ void AHumanPlayer::OnPassButtonClicked()
 	}
 }
 
-// to set IA difficulty and start
+// to set AI difficulty and start
 void AHumanPlayer::OnHardButtonClicked()
 {
 	AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());

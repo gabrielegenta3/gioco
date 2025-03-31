@@ -312,7 +312,7 @@ void ARandomPlayer::MoveBrawler()
 		if (!(XYPosition.X == -1 && XYPosition.Y == -1))
 		{
 			FString UnitID = (Brawler->PawnType == EPawnType::BRAWLER) ? TEXT("B") : TEXT("S");
-			FString PlayerID = TEXT("IA");
+			FString PlayerID = TEXT("AI");
 			FString OriginCell = GetCellString(Brawler->Position);
 			FString DestinationCell = GetCellString(XYPosition);
 
@@ -458,7 +458,7 @@ void ARandomPlayer::MoveSniper()
 		if (!(XYPosition.X == -1 && XYPosition.Y == -1))
 		{
 			FString UnitID = (Sniper->PawnType == EPawnType::BRAWLER) ? TEXT("B") : TEXT("S");
-			FString PlayerID = TEXT("IA");
+			FString PlayerID = TEXT("AI");
 			FString OriginCell = GetCellString(Sniper->Position);
 			FString DestinationCell = GetCellString(XYPosition);
 
