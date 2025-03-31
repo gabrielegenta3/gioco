@@ -270,6 +270,32 @@ void AHumanPlayer::OnTurn()
 	bSniperMoved = false;
 	bBrawlerMoved = false;
 	
+	AUnit* Brawler = nullptr;
+	AUnit* Sniper = nullptr;
+	for (AUnit* Unit : MyUnits)
+	{
+		if (Unit->PawnType == EPawnType::BRAWLER)
+		{
+			Brawler = Unit;
+		}
+		else
+		{
+			Sniper = Unit;
+		}
+	}
+
+	if (!Sniper)
+	{
+		bSniperAttacked = true;
+		bSniperMoved = true;
+	}
+
+	if (!Brawler)
+	{
+		bBrawlerAttacked = true;
+		bBrawlerMoved = true;
+	}
+
 	Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetActorOfClass(GetWorld(), Agame_PlayerController::StaticClass()));
 	PlayerC->HUD->SetTurnText(1);
 }
@@ -374,7 +400,7 @@ void AHumanPlayer::OnClick()
 				{
 					PlayerC->HUD->ShowPassButton();
 				}
-				UE_LOG(LogTemp, Warning, TEXT("next turn 1"));
+
 				GameModality->TurnNextPlayer();
 			}
 		}

@@ -239,8 +239,18 @@ void ARandomPlayer::MoveBrawler()
 			}
 
 
-			FVector2D DestinationBrawler = FindAStarDestination(Brawler, EnemyBrawler);
-			FVector2D DestinationSniper = FindAStarDestination(Brawler, EnemySniper);
+			FVector2D DestinationBrawler(-1, -1);
+			FVector2D DestinationSniper(-1, -1);
+
+			if(EnemyBrawler)
+			{
+				DestinationBrawler = FindAStarDestination(Brawler, EnemyBrawler);
+			}
+			if (EnemySniper)
+			{
+				DestinationSniper = FindAStarDestination(Brawler, EnemySniper);
+			}
+			
 			
 			// if he cant reach a unit he goes to another, if he cant either he goes to a random visitable tile
 			if (!(DestinationBrawler.X == -1 && DestinationSniper.X == -1))
@@ -391,8 +401,17 @@ void ARandomPlayer::MoveSniper()
 			}
 
 
-			FVector2D DestinationBrawler = FindAStarDestination(Sniper, EnemyBrawler);
-			FVector2D DestinationSniper = FindAStarDestination(Sniper, EnemySniper);
+			FVector2D DestinationBrawler(-1, -1);
+			FVector2D DestinationSniper(-1, -1);
+
+			if (EnemyBrawler)
+			{
+				DestinationBrawler = FindAStarDestination(Sniper, EnemyBrawler);
+			}
+			if (EnemySniper)
+			{
+				DestinationSniper = FindAStarDestination(Sniper, EnemySniper);
+			}
 
 			// if he cant reach a unit he goes to another, if he cant either he goes to a random visitable tile
 			if (!(DestinationBrawler.X == -1 && DestinationSniper.X == -1))
@@ -910,6 +929,7 @@ void ARandomPlayer::OnTurn()
 				UE_LOG(LogTemp, Warning, TEXT("Finita lambda function"));
 			}, waitTime, false);
 
+		waitTime += 3;
 		AGameModality* GameModality = Cast<AGameModality>(GetWorld()->GetAuthGameMode());
 		if (GameModality)
 		{

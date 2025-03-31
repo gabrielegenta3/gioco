@@ -571,9 +571,9 @@ void UHUDWidget::UpdateUnitHP()
     FString SniperHP = TEXT("");
 
     if (Brawler)
-        BrawlerHP = FString::Printf(TEXT("Brawler: %d\n"), Brawler->HP);
+        BrawlerHP = FString::Printf(TEXT("Brawler: %d HP\n"), Brawler->HP);
     if (Sniper)
-        SniperHP = FString::Printf(TEXT("Sniper: %d"), Sniper->HP);
+        SniperHP = FString::Printf(TEXT("Sniper: %d HP"), Sniper->HP);
 
     HumanUnitsText->SetText(FText::FromString(FString::Printf(TEXT("%s%s%s"), *MainText, *BrawlerHP, *SniperHP)));
     
@@ -587,14 +587,14 @@ void UHUDWidget::UpdateUnitHP()
         else
             Sniper = Unit;
     }
-    MainText = TEXT("Random Units:\n");
+    MainText = TEXT("AI Units:\n");
     BrawlerHP = TEXT("");
     SniperHP = TEXT("");
 
     if (Brawler)
-        BrawlerHP = FString::Printf(TEXT("Brawler: %d\n"), Brawler->HP);
+        BrawlerHP = FString::Printf(TEXT("Brawler: %d HP\n"), Brawler->HP);
     if (Sniper)
-        SniperHP = FString::Printf(TEXT("Sniper: %d"), Sniper->HP);
+        SniperHP = FString::Printf(TEXT("Sniper: %d HP"), Sniper->HP);
 
     RandomUnitsText->SetText(FText::FromString(FString::Printf(TEXT("%s%s%s"), *MainText, *BrawlerHP, *SniperHP)));
     
@@ -618,7 +618,7 @@ void UHUDWidget::SetTurnText(int32 PlayerNumber)
     else
     {
         FSlateColor Red = FSlateColor(FLinearColor::Red);
-        TurnText->SetText(FText::FromString(FString::Printf(TEXT("IA turn"))));
+        TurnText->SetText(FText::FromString(FString::Printf(TEXT("AI turn"))));
         TurnText->SetColorAndOpacity(Red);
     }
 }

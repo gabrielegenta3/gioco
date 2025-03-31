@@ -330,7 +330,7 @@ void AUnit::Attack(AUnit* Target)
 	int32 Damage = FMath::RandRange(this->MinDamage, this->MaxDamage);
 	Target->TakeDamage(Damage);
 
-	FString PlayerID = (PlayerNumber == 1) ? TEXT("HP") : TEXT("IA");
+	FString PlayerID = (PlayerNumber == 1) ? TEXT("HP") : TEXT("AI");
 	FString UnitID = (PawnType == EPawnType::SNIPER) ? TEXT("S") : TEXT("B");
 	FString Coordinates = GetCellString(Target->Position);
 	Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetActorOfClass(GetWorld(), Agame_PlayerController::StaticClass()));
@@ -348,7 +348,7 @@ void AUnit::Attack(AUnit* Target)
 		int32 CounterDamage = FMath::RandRange(MinCounter, MaxCounter);
 		this->TakeDamage(CounterDamage);
 
-		PlayerID = (Target->PlayerNumber == 1) ? TEXT("HP") : TEXT("IA");
+		PlayerID = (Target->PlayerNumber == 1) ? TEXT("HP") : TEXT("AI");
 		UnitID = (Target->PawnType == EPawnType::SNIPER) ? TEXT("S") : TEXT("B");
 		Coordinates = GetCellString(this->Position);
 
