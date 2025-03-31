@@ -47,6 +47,7 @@ protected:
 	UFUNCTION()
 	void MoveStep();
 
+	// method to convert an ordinary coordinate to an (letter, number) coordinate
 	FString GetCellString(const FVector2D& CellCoord);
 
 public:	

@@ -46,7 +46,7 @@ void AHumanPlayer::BFSMovementRange(int32 startX, int32 startY, int32 size, int3
 				if (!visited[newIndex] && GF->TileArray[newIndex]->GetTileStatus() == ETileStatus::EMPTY)
 				{
 					visited[newIndex] = true;
-					GF->TileArray[newIndex]->LightUp();
+					GF->TileArray[newIndex]->HighLight();
 
 					queue.Enqueue(FIntPoint(nx, ny));
 					distanceQueue.Enqueue(dist + 1);
@@ -96,7 +96,7 @@ void AHumanPlayer::BFSAttackRange(int32 startX, int32 startY, int32 size, int32 
 				{
 					visited[newIndex] = true;
 					if(!GF->TileArray[newIndex]->bIsObstacle && GF->TileArray[newIndex]->PlayerOwner == 2)
-						GF->TileArray[newIndex]->LightUp();
+						GF->TileArray[newIndex]->HighLight();
 
 					queue.Enqueue(FIntPoint(nx, ny));
 					distanceQueue.Enqueue(dist + 1);

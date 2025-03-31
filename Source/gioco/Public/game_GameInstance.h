@@ -44,6 +44,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
 	bool bIsMoving = false;
 
+	// attribute to save the unit that was clicked before
 	UPROPERTY(BlueprintReadOnly)
 	AUnit* SelectedUnit;
 

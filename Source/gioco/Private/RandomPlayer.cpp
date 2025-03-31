@@ -44,7 +44,7 @@ void ARandomPlayer::BFSMovementRange(int32 startX, int32 startY, int32 size, int
 				if (!visited[newIndex] && GF->TileArray[newIndex]->GetTileStatus() == ETileStatus::EMPTY)
 				{
 					visited[newIndex] = true;
-					GF->TileArray[newIndex]->LightUp();
+					GF->TileArray[newIndex]->HighLight();
 
 					queue.Enqueue(FIntPoint(nx, ny));
 					distanceQueue.Enqueue(dist + 1);
@@ -94,7 +94,7 @@ void ARandomPlayer::BFSAttackRange(int32 startX, int32 startY, int32 size, int32
 				{
 					visited[newIndex] = true;
 					if (!GF->TileArray[newIndex]->bIsObstacle && GF->TileArray[newIndex]->PlayerOwner == 1)
-						GF->TileArray[newIndex]->LightUp();
+						GF->TileArray[newIndex]->HighLight();
 
 					queue.Enqueue(FIntPoint(nx, ny));
 					distanceQueue.Enqueue(dist + 1);
@@ -218,43 +218,48 @@ void ARandomPlayer::MoveBrawler()
 
 		if (bIsSmart)
 		{
-			FVector2D DestinationToBrawler;
-			FVector2D DestinationToSniper;
 			int32 TileToBrawler = INT_MAX, TileToSniper = INT_MAX;
 
 			RandomNumber = FMath::RandRange(0, 1);
 
 			if (EnemyBrawler)
 			{
-				DestinationToBrawler = FindAStarDestination(Brawler, EnemyBrawler);
-				TileToSniper = FMath::Abs(Brawler->Position.X - EnemyBrawler->Position.X) + FMath::Abs(Brawler->Position.Y - EnemyBrawler->Position.Y);
+				TileToBrawler = FMath::Abs(Brawler->Position.X - EnemyBrawler->Position.X) + FMath::Abs(Brawler->Position.Y - EnemyBrawler->Position.Y);
 			}
 
 			if (EnemySniper)
 			{
-				DestinationToSniper = FindAStarDestination(Brawler, EnemySniper);
 				TileToSniper = FMath::Abs(Brawler->Position.X - EnemySniper->Position.X) + FMath::Abs(Brawler->Position.Y - EnemySniper->Position.Y);
 			}
-			 
-			if (TileToBrawler < TileToSniper)
+
+
+			FVector2D DestinationBrawler = FindAStarDestination(Brawler, EnemyBrawler);
+			FVector2D DestinationSniper = FindAStarDestination(Brawler, EnemySniper);
+			
+			if (!(DestinationBrawler.X == -1 && DestinationSniper.X == -1))
 			{
-				XYPosition = DestinationToSniper;
-			}
-			else if (TileToBrawler > TileToSniper)
-			{
-				XYPosition = DestinationToBrawler;
-			}
-			else if (TileToBrawler == TileToSniper)
-			{
-				if (RandomNumber == 0)
+				if (TileToBrawler < TileToSniper || DestinationSniper.X == -1)
 				{
-					XYPosition = DestinationToSniper;
+					XYPosition = DestinationBrawler;
 				}
-				else if (RandomNumber == 1)
+				else if (TileToBrawler > TileToSniper || DestinationBrawler.X == -1)
 				{
-					XYPosition = DestinationToBrawler;
+					XYPosition = FindAStarDestination(Brawler, EnemySniper);
+				}
+				else if (TileToBrawler == TileToSniper)
+				{
+
+					if (RandomNumber == 0)
+					{
+						XYPosition = FindAStarDestination(Brawler, EnemySniper);
+					}
+					else
+					{
+						XYPosition = FindAStarDestination(Brawler, EnemyBrawler);
+					}
 				}
 			}
+			
 		}
 		else
 		{
@@ -347,44 +352,45 @@ void ARandomPlayer::MoveSniper()
 
 		if (bIsSmart)
 		{
-			FVector2D DestinationToBrawler;
-			FVector2D DestinationToSniper;
 			int32 TileToBrawler = INT_MAX, TileToSniper = INT_MAX;
 
 			RandomNumber = FMath::RandRange(0, 1);
 
 			if (EnemyBrawler)
 			{
-				DestinationToBrawler = FindAStarDestination(Sniper, EnemyBrawler);
-				TileToSniper = FMath::Abs(Sniper->Position.X - EnemyBrawler->Position.X) + FMath::Abs(Sniper->Position.Y - EnemyBrawler->Position.Y);
-				// TileToBrawler = CountStepsBFS(DestinationToBrawler, EnemyBrawler->Position, GameField);
+				TileToBrawler = FMath::Abs(Sniper->Position.X - EnemyBrawler->Position.X) + FMath::Abs(Sniper->Position.Y - EnemyBrawler->Position.Y);
 			}
 
 			if (EnemySniper)
 			{
-				DestinationToSniper = FindAStarDestination(Sniper, EnemySniper);
 				TileToSniper = FMath::Abs(Sniper->Position.X - EnemySniper->Position.X) + FMath::Abs(Sniper->Position.Y - EnemySniper->Position.Y);
-				//TileToSniper = CountStepsBFS(DestinationToBrawler, EnemySniper->Position, GameField);
 			}
 
 
-			if (TileToBrawler > TileToSniper)
+			FVector2D DestinationBrawler = FindAStarDestination(Sniper, EnemyBrawler);
+			FVector2D DestinationSniper = FindAStarDestination(Sniper, EnemySniper);
+
+			if (!(DestinationBrawler.X == -1 && DestinationSniper.X == -1))
 			{
-				XYPosition = DestinationToSniper;
-			}
-			else if (TileToBrawler < TileToSniper)
-			{
-				XYPosition = DestinationToBrawler;
-			}
-			else if (TileToBrawler == TileToSniper)
-			{
-				if (RandomNumber == 0)
+				if (TileToBrawler < TileToSniper || DestinationSniper.X == -1)
 				{
-					XYPosition = DestinationToSniper;
+					XYPosition = DestinationBrawler;
 				}
-				else if (RandomNumber == 1)
+				else if (TileToBrawler > TileToSniper || DestinationBrawler.X == -1)
 				{
-					XYPosition = DestinationToBrawler;
+					XYPosition = FindAStarDestination(Sniper, EnemySniper);
+				}
+				else if (TileToBrawler == TileToSniper)
+				{
+
+					if (RandomNumber == 0)
+					{
+						XYPosition = FindAStarDestination(Sniper, EnemySniper);
+					}
+					else
+					{
+						XYPosition = FindAStarDestination(Sniper, EnemyBrawler);
+					}
 				}
 			}
 		}
@@ -537,9 +543,10 @@ void ARandomPlayer::AttackBrawler()
 		}
 
 
-		if (GameModality && GameModality->CheckWin())
+		if (GameModality)
 		{
-			return;
+			if (GameModality->CheckWin())
+				return;
 		}
 		else
 		{
@@ -942,13 +949,6 @@ int32 ARandomPlayer::CountStepsBFS(const FVector2D& Start, const FVector2D& Goal
 		TargetIndices.Add(GoalIndex);
 	}
 
-	// Per debug: stampa gli indici target
-	/*FString TargetsStr;
-	for (int32 idx : TargetIndices)
-	{
-		TargetsStr += TEXT("X:") + FString::FromInt(idx / GF->Size) + TEXT(" Y:") + FString::FromInt(idx % GF->Size) + TEXT(" ");
-	}
-	UE_LOG(LogTemp, Warning, TEXT("Target indices: %s"), *TargetsStr);*/
 
 	// Inizializza l'array dei passi
 	TArray<int32> Steps;
@@ -1103,7 +1103,7 @@ int32 ARandomPlayer::AStarSearch(const FVector2D& Start, const FVector2D& Goal, 
 		delete Node;
 	}
 
-	return -1; 
+	return -1;
 }
 
 FVector2D ARandomPlayer::FindAStarDestination(AUnit* MovingUnit, AUnit* TargetUnit)
@@ -1171,7 +1171,7 @@ FVector2D ARandomPlayer::FindAStarDestination(AUnit* MovingUnit, AUnit* TargetUn
 	if (BestPath.Num() == 0)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("FindAStarDestination: No valid path found"));
-		return Start;
+		return FVector2D(-1, -1);
 	}
 
 	// Se il percorso ottimo ha lunghezza minore o uguale a MaxSteps, restituisci il punto finale
@@ -1185,6 +1185,7 @@ FVector2D ARandomPlayer::FindAStarDestination(AUnit* MovingUnit, AUnit* TargetUn
 		return BestPath[MovingUnit->MovementRange];
 	}
 }
+
 
 FString ARandomPlayer::GetCellString(const FVector2D& CellCoord)
 {

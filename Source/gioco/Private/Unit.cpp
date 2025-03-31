@@ -27,6 +27,7 @@ AUnit::AUnit()
 	SetRootComponent(Scene);
 	StaticMeshComponent->SetupAttachment(Scene);
 
+	// loading shape
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(TEXT("/Script/Engine.StaticMesh'/Game/Shapes/Shape_Plane.Shape_Plane'"));
 	if (MeshAsset.Succeeded())
 	{
@@ -91,11 +92,14 @@ void AUnit::BeginPlay()
 	
 }
 
+// method to assign basic values. this is used right after the unit spawn method
 void AUnit::Init(EPawnType InPawnType, int32 InPlayerNumber, FVector2D Pos)
 {
 	PawnType = InPawnType;
 	PlayerNumber = InPlayerNumber;
 	Position = Pos;
+
+	// setting Unit standard values
 	if (PlayerNumber == 1)
 	{
 		if (PawnType == EPawnType::BRAWLER)
@@ -152,6 +156,7 @@ void AUnit::Init(EPawnType InPawnType, int32 InPlayerNumber, FVector2D Pos)
 	}
 }
 
+// method to check if the unit can attack based on his attack range
 bool AUnit::CanAttack()
 {
 	UWorld* World = GetWorld();
@@ -168,6 +173,7 @@ bool AUnit::CanAttack()
 		return false;
 	}
 
+	// if the unit is of the human player it searches for the units of the random player, otherwise vice versa
 	if (this->PlayerNumber == 1)
 	{
 		if (GameModality->Players.Num() <= 1)
@@ -255,6 +261,7 @@ void AUnit::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 }
 
+// method to self destroy the unit safely and removing himself from his owner's array
 void AUnit::SelfDestroy()
 {
 	if (AGameField * GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass())))
@@ -290,33 +297,34 @@ void AUnit::SelfDestroy()
 
 void AUnit::FindPathAndMove(const FVector& Destination, AGameField* GameField)
 {
+	// Ensure that the GameField is valid before proceeding, preventing potential null pointer issues.
 	if (!GameField)
 	{
 		UE_LOG(LogTemp, Error, TEXT("GameField è nullo!"));
 		return;
 	}
 
-	// Ottieni l'indice di partenza dall'unità
+	// Get the starting index based on the unit's current position in the game field grid
 	int32 StartIndex = static_cast<int32>(Position.X) * GameField->Size + static_cast<int32>(Position.Y);
-	// Ottieni l'indice di arrivo dalla destinazione
+	// Compute the goal index using the destination coordinates transformed into the game field grid
 	int32 GoalIndex = GameField->GetXYPositionByRelativeLocation(Destination).X * GameField->Size + GameField->GetXYPositionByRelativeLocation(Destination).Y;
 
-	// Esegui BFS
+	// Use the Breadth-First Search (BFS) algorithm to find a path from the start to the goal index
 	bool bFound = FindPathBFS(StartIndex, GoalIndex, GameField);
 	if (!bFound)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Nessun percorso trovato!"));
+		UE_LOG(LogTemp, Warning, TEXT("No valid path found!"));
 		return;
 	}
 
-	// Ora CurrentPath contiene gli indici
-	// Converti in posizioni del mondo
+	// Convert the found path from grid indices to world-space positions
 	TArray<FVector> WorldPositions = ConvertPathToWorldPositions(CurrentPath, GameField);
 
-	// Avvia il movimento passo-passo
+	// Trigger the unit's step-by-step movement along the computed path in world coordinates
 	MoveAlongPath(WorldPositions);
 }
 
+// method to handle attack and eventually counter attack
 void AUnit::Attack(AUnit* Target)
 {
 	int32 Damage = FMath::RandRange(this->MinDamage, this->MaxDamage);
@@ -335,7 +343,7 @@ void AUnit::Attack(AUnit* Target)
 		UE_LOG(LogTemp, Warning, TEXT("Player controller or HUD is null"));
 	}
 
-
+	// counter attack
 	if (this->PawnType == EPawnType::SNIPER && (static_cast<int32>(FMath::Abs(this->Position.X - Target->Position.X) + FMath::Abs(this->Position.Y - Target->Position.Y)) <= Target->AttackRange)) {
 		int32 CounterDamage = FMath::RandRange(MinCounter, MaxCounter);
 		this->TakeDamage(CounterDamage);
@@ -356,12 +364,12 @@ void AUnit::Attack(AUnit* Target)
 
 }
 
+// method to handle damage taken
 void AUnit::TakeDamage(const int32 Damage)
 {
 	if (Damage >= HP)
 	{
 		HP = 0;
-
 		this->SelfDestroy();
 	}
 	else
@@ -382,55 +390,60 @@ void AUnit::TakeDamage(const int32 Damage)
 
 
 
-// BFS to find a path (4 directions) from StartIndex to GoalIndex
+// Performs Breadth-First Search (BFS) to find a path (4 directions) from StartIndex to GoalIndex
 bool AUnit::FindPathBFS(int32 StartIndex, int32 GoalIndex, AGameField* GF)
 {
 	if (StartIndex == GoalIndex)
 	{
-		// You're already on goal
-		CurrentPath = { (FVector)StartIndex }; // Minimale, indica un solo indice
+		// If already at the goal, return minimal path with only the start index
+		CurrentPath = { (FVector)StartIndex };
 		return true;
 	}
 
-	// Array per tenere traccia da dove arrivi a ogni indice
+	// Array to track where each index was reached from
 	TArray<int32> CameFrom;
 	CameFrom.Init(-1, GF->Size * GF->Size);
 
+	// Queue for BFS traversal
 	TQueue<int32> Queue;
 	Queue.Enqueue(StartIndex);
-	CameFrom[StartIndex] = StartIndex; // radice di se stessa
+	CameFrom[StartIndex] = StartIndex; // Root of the search tree
 
 	bool bFoundGoal = false;
 
+	// BFS loop to explore the grid
 	while (!Queue.IsEmpty())
 	{
 		int32 Current;
 		Queue.Dequeue(Current);
 
+		// If goal is reached, stop searching
 		if (Current == GoalIndex)
 		{
 			bFoundGoal = true;
 			break;
 		}
 
-		// Calcolo coordinate
+		// Compute grid coordinates from index
 		int32 x = Current / GF->Size;
 		int32 y = Current % GF->Size;
 
-		// 4 direzioni
+		// Define movement in 4 possible directions (right, left, down, up)
 		static const int32 DirX[4] = { 1, -1, 0, 0 };
 		static const int32 DirY[4] = { 0, 0, 1, -1 };
 
+		// Explore neighbors in all 4 directions
 		for (int i = 0; i < 4; i++)
 		{
 			int32 nx = x + DirX[i];
 			int32 ny = y + DirY[i];
 
+			// Check if the new position is within bounds
 			if (nx >= 0 && nx < GF->Size && ny >= 0 && ny < GF->Size)
 			{
 				int32 NextIndex = nx * GF->Size + ny;
 
-				// Controlla se la tile è libera e non visitata
+				// Ensure the tile is empty and hasn't been visited
 				if (GF->TileArray[NextIndex]->GetTileStatus() == ETileStatus::EMPTY &&
 					CameFrom[NextIndex] == -1)
 				{
@@ -441,12 +454,13 @@ bool AUnit::FindPathBFS(int32 StartIndex, int32 GoalIndex, AGameField* GF)
 		}
 	}
 
+	// If no valid path was found, return false
 	if (!bFoundGoal)
 	{
 		return false;
 	}
 
-	// Ricostruisci il percorso
+	// Reconstruct the path from goal to start
 	TArray<int32> PathIndices;
 	int32 CurrentIndex = GoalIndex;
 	while (CurrentIndex != StartIndex)
@@ -457,27 +471,25 @@ bool AUnit::FindPathBFS(int32 StartIndex, int32 GoalIndex, AGameField* GF)
 	PathIndices.Add(StartIndex);
 	Algo::Reverse(PathIndices);
 
-	// Salva in CurrentPath come indici (ma noi vogliamo le posizioni)
-	// --> o usi un TArray<int32> se preferisci, ma qui semplifichiamo
-	// Salviamo come "fake" in CurrentPath per ora
+	// Store the path as FVector indices for later conversion
 	CurrentPath.Empty(PathIndices.Num());
 	for (int32 idx : PathIndices)
 	{
-		// Inseriamo come se fosse "FVector((float)idx, 0, 0)" momentaneo
-		// Poi convertiremo in ConvertPathToWorldPositions
+		// Temporarily store indices as FVector for later conversion
 		CurrentPath.Add(FVector(idx, 0.f, 0.f));
 	}
 
 	return true;
 }
 
-// Converte gli indici salvati in CurrentPath in posizioni 3D
+
+// Converts indexes saved in CurrentPath to 3D positions
 TArray<FVector> AUnit::ConvertPathToWorldPositions(const TArray<FVector>& PathIndices, AGameField* GF)
 {
 	TArray<FVector> WorldPositions;
 	for (const FVector& FakeIndexVec : PathIndices)
 	{
-		int32 Index = (int32)FakeIndexVec.X; // estraiamo l'indice
+		int32 Index = (int32)FakeIndexVec.X; // extract index
 		FVector WorldLoc = GF->TileArray[Index]->GetActorLocation();
 		WorldLoc.Z = 1;
 		WorldPositions.Add(WorldLoc);
@@ -485,40 +497,40 @@ TArray<FVector> AUnit::ConvertPathToWorldPositions(const TArray<FVector>& PathIn
 	return WorldPositions;
 }
 
-// Avvia il movimento passo-passo
+// Start step-by-step movement
 void AUnit::MoveAlongPath(const TArray<FVector>& WorldPositions)
 {
 	if (WorldPositions.Num() < 2)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Percorso troppo corto o inesistente."));
+		UE_LOG(LogTemp, Warning, TEXT("Path too short or nonexistent."));
 		return;
 	}
 
 	CurrentPathIndex = 0;
-	// Rimpiazziamo CurrentPath con posizioni reali
+	// Replace CurrentPath with real-world positions
 	CurrentPath = WorldPositions;
 
-	// Iniziamo da 0, spostiamo l'unità
+	// Start from index 0 and move the unit
 	SetActorLocation(CurrentPath[CurrentPathIndex]);
 
-	// Avvia un timer che richiama MoveStep
+	// Start a timer that calls MoveStep
 	Ugame_GameInstance* GameInstance = Cast<Ugame_GameInstance>(GetGameInstance());
 	GetWorldTimerManager().SetTimer(MoveTimerHandle, this, &AUnit::MoveStep, StepTime, true);
 }
 
-// Funzione chiamata dal timer per spostarsi di uno step
+// Function called by the timer to move one step
 void AUnit::MoveStep()
 {
 	CurrentPathIndex++;
 	if (CurrentPathIndex >= CurrentPath.Num())
 	{
-		// Fine del percorso
-		UE_LOG(LogTemp, Warning, TEXT("Percorso completato!"));
+		// End of path
+		UE_LOG(LogTemp, Warning, TEXT("Path completed!"));
 		GetWorldTimerManager().ClearTimer(MoveTimerHandle);
 		return;
 	}
 
-	// Muoviamo l'unità alla prossima posizione
+	// Move the unit to the next position
 	SetActorLocation(CurrentPath[CurrentPathIndex]);
 	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
 	Position = GameField->GetXYPositionByRelativeLocation(CurrentPath[CurrentPathIndex]);
@@ -528,13 +540,14 @@ void AUnit::MoveStep()
 
 FString AUnit::GetCellString(const FVector2D& CellCoord)
 {
-	// Convertiamo la colonna in lettera: 0->A, 1->B, ...
+	// Convert column index to letter: 0->A, 1->B, ...
 	int32 Column = static_cast<int32>(CellCoord.X);
 	TCHAR ColumnLetter = 'A' + Column;
 
-	// Convertiamo la riga in numero (aggiungiamo 1 per usare 1-based indexing)
+	// Convert row index to number (add 1 for 1-based indexing)
 	int32 Row = static_cast<int32>(CellCoord.Y) + 1;
 
-	// Combiniamo la lettera e il numero in una stringa
+	// Combine letter and number into a string
 	return FString::Printf(TEXT("%c%d"), ColumnLetter, Row);
 }
+

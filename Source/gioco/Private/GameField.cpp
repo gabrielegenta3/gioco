@@ -68,7 +68,8 @@ bool isTotallyConnected(const TArray<bool>& Obstacles, int32 Size)
 	return true;
 }
 
-
+// method to generate obstacles 
+// if the game field stops to be totally connected he removes the last obstacle inserted and sort another one
 TArray<bool> AGameField::GenerateObstacles(float ObstaclePercentage) {
 	bool allConnected = true; // flag to check if the map is connected
 	

@@ -87,8 +87,7 @@ ATile::ATile()
 
 	delete MatInstance;
 
-	//SetRootComponent(StaticMeshComponent);
-
+	// loading shape 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(TEXT("/Script/Engine.StaticMesh'/Game/Shapes/Shape_Plane.Shape_Plane'"));
 	if (MeshAsset.Succeeded())
 	{
@@ -121,7 +120,7 @@ void ATile::TileInit(bool isObstacle) {
 		
 	}
 	else {
-		// load the material
+		// set the standard material
 		StaticMeshComponent->SetMaterial(0, EmptyTile);
 		PlayerOwner = -1;
 		Status = ETileStatus::EMPTY;
@@ -129,7 +128,7 @@ void ATile::TileInit(bool isObstacle) {
 }
 
 
-
+// literally setting tile status
 void ATile::SetTileStatus(const int32 TileOwner, const ETileStatus TileStatus)
 {
 	PlayerOwner = TileOwner;
@@ -156,7 +155,9 @@ FVector2D ATile::GetGridPosition()
 	return TileGridPosition;
 }
 
-void ATile::LightUp()
+
+// method to highlight a tile
+void ATile::HighLight()
 {
 	if (!bIsObstacle && Status == ETileStatus::OCCUPIED) 
 	{
@@ -174,6 +175,7 @@ void ATile::LightUp()
 	}
 }
 
+// reset
 void ATile::ResetTile(bool isTotalReset)
 {
 	StaticMeshComponent->SetMaterial(0, EmptyTile);
@@ -193,10 +195,5 @@ void ATile::BeginPlay()
 	Super::BeginPlay();
 }
 
-// Called every frame
-/*void ATile::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
 
-}*/
 

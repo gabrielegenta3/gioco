@@ -23,11 +23,11 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	bool bIsObstacle;
 
-	// bool to check if the tile is lighted 
+	// bool to check if the tile is lighted and is empty
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	bool bIsGreen;
 
-	// bool to check if the tile is lighted 
+	// bool to check if the tile is lighted and there is an enemy on it
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	bool bIsRed;
 
@@ -53,7 +53,7 @@ public:
 	FVector2D GetGridPosition();
 
 	// function to light up the tile
-	void LightUp();
+	void HighLight();
 
 	// function to light up the tile
 	void ResetTile(bool isTotalReset);
