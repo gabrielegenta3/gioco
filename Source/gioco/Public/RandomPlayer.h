@@ -32,22 +32,22 @@ protected:
 	virtual void BeginPlay() override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
-	bool SniperMoved;
+	bool bSniperMoved;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
-	bool BrawlerMoved;
+	bool bBrawlerMoved;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
-	bool SniperAttacked;
+	bool bSniperAttacked;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
-	bool BrawlerAttacked;
+	bool bBrawlerAttacked;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
-	bool SniperPlaced;
+	bool bSniperPlaced;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
-	bool BrawlerPlaced;
+	bool bBrawlerPlaced;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
 	bool bIsSmart;  //^=.=^

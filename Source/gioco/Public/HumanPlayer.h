@@ -68,22 +68,22 @@ protected:
 	AUnit* ControlledUnit;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
-	bool SniperMoved;
+	bool bSniperMoved;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
-	bool BrawlerMoved;
+	bool bBrawlerMoved;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
-	bool SniperAttacked;
+	bool bSniperAttacked;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
-	bool BrawlerAttacked;
+	bool bBrawlerAttacked;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
-	bool SniperPlaced;
+	bool bSniperPlaced;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Flags")
-	bool BrawlerPlaced;
+	bool bBrawlerPlaced;
 
 	// function to check in which tile a Unit could go based on their max step
 	void BFSMovementRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TArray<bool>& visited, AGameField* GF);

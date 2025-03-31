@@ -375,15 +375,17 @@ void AUnit::TakeDamage(const int32 Damage)
 	else
 	{
 		HP -= Damage;
-		Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetActorOfClass(GetWorld(), Agame_PlayerController::StaticClass()));
-		if (PlayerC && PlayerC->HUD)
-		{
-			PlayerC->HUD->UpdateUnitHP();
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Player controller or HUD is null"));
-		}
+		
+	}
+
+	Agame_PlayerController* PlayerC = Cast<Agame_PlayerController>(UGameplayStatics::GetActorOfClass(GetWorld(), Agame_PlayerController::StaticClass()));
+	if (PlayerC && PlayerC->HUD)
+	{
+		PlayerC->HUD->UpdateUnitHP();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Player controller or HUD is null"));
 	}
 }
 

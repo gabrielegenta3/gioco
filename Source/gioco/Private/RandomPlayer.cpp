@@ -5,11 +5,11 @@
 #include "HumanPlayer.h"
 #include "game_PlayerController.h"
 
-
+// method to search and highlight all the tiles the unit can visit
 void ARandomPlayer::BFSMovementRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TArray<bool>& visited, AGameField* GF)
 {
 	TQueue<FIntPoint> queue;
-	TQueue<int32> distanceQueue; // per salvare i passi correnti
+	TQueue<int32> distanceQueue; 
 
 	queue.Enqueue(FIntPoint(startX, startY));
 	distanceQueue.Enqueue(0);
@@ -26,11 +26,11 @@ void ARandomPlayer::BFSMovementRange(int32 startX, int32 startY, int32 size, int
 		int32 dist;
 		distanceQueue.Dequeue(dist);
 
-		// Se dist >= maxSteps, non esploriamo più
+		// if dist >= maxSteps, we cant explore anymore
 		if (dist >= maxSteps)
 			continue;
 
-		// 4 direzioni
+		// 4 directions
 		static const int32 DirX[4] = { 1, -1, 0, 0 };
 		static const int32 DirY[4] = { 0, 0, 1, -1 };
 
@@ -55,11 +55,11 @@ void ARandomPlayer::BFSMovementRange(int32 startX, int32 startY, int32 size, int
 }
 
 
-// BFS to find attackable units
+// method to search and highlight all the units the unit can attack
 void ARandomPlayer::BFSAttackRange(int32 startX, int32 startY, int32 size, int32 maxSteps, TArray<bool>& visited, AGameField* GF)
 {
 	TQueue<FIntPoint> queue;
-	TQueue<int32> distanceQueue; // per salvare i passi correnti
+	TQueue<int32> distanceQueue; 
 
 	queue.Enqueue(FIntPoint(startX, startY));
 	distanceQueue.Enqueue(0);
@@ -75,11 +75,11 @@ void ARandomPlayer::BFSAttackRange(int32 startX, int32 startY, int32 size, int32
 		int32 dist;
 		distanceQueue.Dequeue(dist);
 
-		// Se dist >= maxSteps, non esploriamo più
+		// if dist >= maxSteps, we cant explore anymore
 		if (dist >= maxSteps)
 			continue;
 
-		// 4 direzioni
+		// 4 directions
 		static const int32 DirX[4] = { 1, -1, 0, 0 };
 		static const int32 DirY[4] = { 0, 0, 1, -1 };
 
@@ -104,6 +104,7 @@ void ARandomPlayer::BFSAttackRange(int32 startX, int32 startY, int32 size, int32
 	}
 }
 
+// method to do highlight attack range and movement range and start a timer to let brawler move
 void ARandomPlayer::HighlightAndMoveBrawler()
 {
 
@@ -134,6 +135,7 @@ void ARandomPlayer::HighlightAndMoveBrawler()
 	
 }
 
+// method to do highlight attack range and movement range and start a timer to let sniper move
 void ARandomPlayer::HighlightAndMoveSniper()
 {
 	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
@@ -162,12 +164,14 @@ void ARandomPlayer::HighlightAndMoveSniper()
 	GetWorldTimerManager().SetTimer(SniperMoveTimerHandle, this, &ARandomPlayer::MoveSniper, 1.f, false);
 }
 
+// method to handle ai movement for brawler
 void ARandomPlayer::MoveBrawler()
 {
 	AGameField* GameField = Cast<AGameField>(UGameplayStatics::GetActorOfClass(GetWorld(), AGameField::StaticClass()));
 
 	if (IsMyTurn)
 	{
+		// he finds his Brawler
 		AUnit* Brawler = nullptr;
 		for (AUnit* Unit : MyUnits)
 		{
@@ -192,6 +196,7 @@ void ARandomPlayer::MoveBrawler()
 			return;
 		}
 
+		// now he search for the enemy sniper and brawler
 		AHumanPlayer* HumanPlayer = Cast<AHumanPlayer>(GameModality->Players[0]);
 		AUnit* EnemySniper = nullptr;
 		AUnit* EnemyBrawler = nullptr;
@@ -292,7 +297,7 @@ void ARandomPlayer::MoveBrawler()
 			UE_LOG(LogTemp, Warning, TEXT("Going to x:%i y:%i"), static_cast<int32>(XYPosition.X), static_cast<int32>(XYPosition.Y));
 			GameField->TileArray[static_cast<int32>(XYPosition.X) * GameField->Size + static_cast<int32>(XYPosition.Y)]->SetTileStatus(2, ETileStatus::OCCUPIED);
 		}
-		BrawlerMoved = true;
+		bBrawlerMoved = true;
 	}
 	
 	GameField->UnHighLight();
@@ -426,7 +431,7 @@ void ARandomPlayer::MoveSniper()
 			GameField->TileArray[static_cast<int32>(XYPosition.X) * GameField->Size + static_cast<int32>(XYPosition.Y)]->SetTileStatus(2, ETileStatus::OCCUPIED);
 		}
 
-		SniperMoved = true;
+		bSniperMoved = true;
 	}
 	
 
@@ -628,12 +633,12 @@ ARandomPlayer::ARandomPlayer()
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	GameInstance = Cast<Ugame_GameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
-	BrawlerPlaced = false;
-	SniperPlaced = false;
-	BrawlerAttacked = false;
-	SniperAttacked = false;	
-	BrawlerMoved = false;
-	SniperMoved = false;
+	bBrawlerPlaced = false;
+	bSniperPlaced = false;
+	bBrawlerAttacked = false;
+	bSniperAttacked = false;	
+	bBrawlerMoved = false;
+	bSniperMoved = false;
 	bIsSmart = false;
 }
 
@@ -664,12 +669,12 @@ void ARandomPlayer::OnTurn()
 	if (PlayerC && PlayerC->HUD)
 		PlayerC->HUD->SetTurnText(2);
 
-	BrawlerAttacked = false;
-	SniperAttacked = false;
+	bBrawlerAttacked = false;
+	bSniperAttacked = false;
 	IsMyTurn = true;
 	
 
-	if (!(SniperPlaced && BrawlerPlaced))
+	if (!(bSniperPlaced && bBrawlerPlaced))
 	{
 		GetWorld()->GetTimerManager().SetTimer(TimerHandle1, [&]()
 			{
@@ -685,12 +690,12 @@ void ARandomPlayer::OnTurn()
 
 					UE_LOG(LogTemp, Warning, TEXT("Random index: %i"), RandomNumber);
 
-					if (!(SniperPlaced || BrawlerPlaced))
+					if (!(bSniperPlaced || bBrawlerPlaced))
 					{
 						Rand = FMath::RandRange(0, 1);
 					}
 
-					if (SniperPlaced || Rand == 0)
+					if (bSniperPlaced || Rand == 0)
 					{
 
 						GameField->TileArray[RandomNumber]->SetTileStatus(2, ETileStatus::OCCUPIED);
@@ -701,7 +706,7 @@ void ARandomPlayer::OnTurn()
 						FVector Position = GameField->GetRelativeLocationByXYPosition(X, Y);
 						Position.Z = 1;
 						AUnit* Unit = GameModality->SpawnCellUnit(2, Position, EPawnType::BRAWLER);
-						BrawlerPlaced = true;
+						bBrawlerPlaced = true;
 						if (Unit)
 						{
 							MyUnits.Add(Unit);
@@ -713,7 +718,7 @@ void ARandomPlayer::OnTurn()
 
 
 					}
-					else if (BrawlerPlaced || Rand == 1)
+					else if (bBrawlerPlaced || Rand == 1)
 					{
 						int32 X = RandomNumber / GameField->Size;
 						int32 Y = RandomNumber % GameField->Size;
@@ -721,7 +726,7 @@ void ARandomPlayer::OnTurn()
 						FVector Position = GameField->GetRelativeLocationByXYPosition(X, Y);
 						Position.Z = 1;
 						AUnit* Unit = GameModality->SpawnCellUnit(2, Position, EPawnType::SNIPER);
-						SniperPlaced = true;
+						bSniperPlaced = true;
 						if (Unit)
 						{
 							MyUnits.Add(Unit);
@@ -774,24 +779,24 @@ void ARandomPlayer::OnTurn()
 		{
 			GetWorld()->GetTimerManager().SetTimer(BrawlerAttackTimerHandle, this, &ARandomPlayer::HighlightAndAttackBrawler, waitTime, false);
 			waitTime += 2.5;
-			BrawlerAttacked = true;
+			bBrawlerAttacked = true;
 		}
 
 		if (Sniper && Sniper->CanAttack())
 		{
 			GetWorld()->GetTimerManager().SetTimer(SniperAttackTimerHandle, this, &ARandomPlayer::HighlightAndAttackSniper, waitTime, false);
 			waitTime += 2.5;
-			SniperAttacked = true;
+			bSniperAttacked = true;
 		}
 
 		if (RandomNumber == 0)
 		{
-			if (Brawler && !BrawlerAttacked) 
+			if (Brawler && !bBrawlerAttacked) 
 			{
 				GetWorld()->GetTimerManager().SetTimer(BrawlerMoveTimerHandle, this, &ARandomPlayer::HighlightAndMoveBrawler, waitTime, false);
 				waitTime += 2.5;
 			}
-			if (Sniper && !SniperAttacked)
+			if (Sniper && !bSniperAttacked)
 			{
 				GetWorld()->GetTimerManager().SetTimer(SniperMoveTimerHandle, this, &ARandomPlayer::HighlightAndMoveSniper, waitTime, false);
 				waitTime += 2.5;
@@ -799,12 +804,12 @@ void ARandomPlayer::OnTurn()
 		}
 		else
 		{
-			if (Sniper && !SniperAttacked)
+			if (Sniper && !bSniperAttacked)
 			{
 				GetWorld()->GetTimerManager().SetTimer(SniperMoveTimerHandle, this, &ARandomPlayer::HighlightAndMoveSniper, waitTime, false);
 				waitTime += 2.5;
 			}
-			if (Brawler && !BrawlerAttacked)
+			if (Brawler && !bBrawlerAttacked)
 			{
 				GetWorld()->GetTimerManager().SetTimer(BrawlerMoveTimerHandle, this, &ARandomPlayer::HighlightAndMoveBrawler, waitTime, false);
 				waitTime += 2.5;
@@ -830,14 +835,14 @@ void ARandomPlayer::OnTurn()
 
 				if (RandomNumber == 0)
 				{
-					if (Brawler && !BrawlerAttacked && Brawler->CanAttack())
+					if (Brawler && !bBrawlerAttacked && Brawler->CanAttack())
 					{
 						GetWorld()->GetTimerManager().SetTimer(BrawlerAttackTimerHandle, this, &ARandomPlayer::HighlightAndAttackBrawler, wait, false);
 						bool IsActive = GetWorld()->GetTimerManager().IsTimerActive(BrawlerAttackTimerHandle);
 						UE_LOG(LogTemp, Warning, TEXT("BrawlerAttackTimerHandle active after SetTimer: %s"), IsActive ? TEXT("YES") : TEXT("NO"));
 						wait += 2.5;
 					}
-					if (Sniper && !SniperAttacked && Sniper->CanAttack())
+					if (Sniper && !bSniperAttacked && Sniper->CanAttack())
 					{
 						GetWorld()->GetTimerManager().SetTimer(SniperAttackTimerHandle, this, &ARandomPlayer::HighlightAndAttackSniper, wait, false);
 						bool IsActive = GetWorld()->GetTimerManager().IsTimerActive(SniperAttackTimerHandle);
@@ -847,14 +852,14 @@ void ARandomPlayer::OnTurn()
 				}
 				else
 				{
-					if (Sniper && !SniperAttacked && Sniper->CanAttack())
+					if (Sniper && !bSniperAttacked && Sniper->CanAttack())
 					{
 						GetWorld()->GetTimerManager().SetTimer(SniperAttackTimerHandle, this, &ARandomPlayer::HighlightAndAttackSniper, wait, false);
 						wait += 2.5;
 						bool IsActive = GetWorld()->GetTimerManager().IsTimerActive(SniperAttackTimerHandle);
 						UE_LOG(LogTemp, Warning, TEXT("SniperAttackTimerHandle active after SetTimer: %s"), IsActive ? TEXT("YES") : TEXT("NO"));
 					}
-					if (Brawler && !BrawlerAttacked && Brawler->CanAttack())
+					if (Brawler && !bBrawlerAttacked && Brawler->CanAttack())
 					{
 						GetWorld()->GetTimerManager().SetTimer(BrawlerAttackTimerHandle, this, &ARandomPlayer::HighlightAndAttackBrawler, wait, false);
 						wait += 2.5;
@@ -883,13 +888,13 @@ void ARandomPlayer::OnTurn()
 
 void ARandomPlayer::ResetFlags()
 {
-	BrawlerAttacked = false;
-	BrawlerMoved = false;
-	BrawlerPlaced = false;
+	bBrawlerAttacked = false;
+	bBrawlerMoved = false;
+	bBrawlerPlaced = false;
 
-	SniperAttacked = false;
-	SniperMoved = false;
-	SniperPlaced = false;
+	bSniperAttacked = false;
+	bSniperMoved = false;
+	bSniperPlaced = false;
 }
 
 
